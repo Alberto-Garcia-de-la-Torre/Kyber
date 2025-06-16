@@ -1,0 +1,377 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"rng.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "rng.c"
+  18              		.section	.text.randombytes,"ax",%progbits
+  19              		.align	1
+  20              		.global	randombytes
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	randombytes:
+  26              	.LVL0:
+  27              	.LFB3:
+   1:rng.c         **** //
+   2:rng.c         **** //  rng.c
+   3:rng.c         **** //
+   4:rng.c         **** //  Created by Bassham, Lawrence E (Fed) on 8/29/17.
+   5:rng.c         **** //  Copyright © 2017 Bassham, Lawrence E (Fed). All rights reserved.
+   6:rng.c         **** //
+   7:rng.c         **** 
+   8:rng.c         **** #include <string.h>
+   9:rng.c         **** #include "rng.h"
+  10:rng.c         **** 
+  11:rng.c         **** // Libreria añadida por Alberto
+  12:rng.c         **** #include <stdlib.h>
+  13:rng.c         **** // #include <time.h>
+  14:rng.c         **** 
+  15:rng.c         **** /*
+  16:rng.c         **** #include <openssl/conf.h>
+  17:rng.c         **** #include <openssl/evp.h>
+  18:rng.c         **** #include <openssl/err.h>
+  19:rng.c         **** 
+  20:rng.c         **** AES256_CTR_DRBG_struct  DRBG_ctx;
+  21:rng.c         **** */
+  22:rng.c         **** 
+  23:rng.c         **** //void    AES256_ECB(unsigned char *key, unsigned char *ctr, unsigned char *buffer);
+  24:rng.c         **** 
+  25:rng.c         **** /*
+  26:rng.c         ****  seedexpander_init()
+  27:rng.c         ****  ctx            - stores the current state of an instance of the seed expander
+  28:rng.c         ****  seed           - a 32 byte random value
+  29:rng.c         ****  diversifier    - an 8 byte diversifier
+  30:rng.c         ****  maxlen         - maximum number of bytes (less than 2**32) generated under this seed and diversifi
+  31:rng.c         ****  */
+  32:rng.c         **** /*
+  33:rng.c         **** int
+  34:rng.c         **** seedexpander_init(AES_XOF_struct *ctx,
+  35:rng.c         ****                   unsigned char *seed,
+  36:rng.c         ****                   unsigned char *diversifier,
+  37:rng.c         ****                   unsigned long maxlen)
+  38:rng.c         **** {
+  39:rng.c         ****     if ( maxlen >= 0x100000000 )
+  40:rng.c         ****         return RNG_BAD_MAXLEN;
+  41:rng.c         **** 
+  42:rng.c         ****     ctx->length_remaining = maxlen;
+  43:rng.c         **** 
+  44:rng.c         ****     memcpy(ctx->key, seed, 32);
+  45:rng.c         **** 
+  46:rng.c         ****     memcpy(ctx->ctr, diversifier, 8);
+  47:rng.c         ****     ctx->ctr[11] = maxlen % 256;
+  48:rng.c         ****     maxlen >>= 8;
+  49:rng.c         ****     ctx->ctr[10] = maxlen % 256;
+  50:rng.c         ****     maxlen >>= 8;
+  51:rng.c         ****     ctx->ctr[9] = maxlen % 256;
+  52:rng.c         ****     maxlen >>= 8;
+  53:rng.c         ****     ctx->ctr[8] = maxlen % 256;
+  54:rng.c         ****     memset(ctx->ctr+12, 0x00, 4);
+  55:rng.c         **** 
+  56:rng.c         ****     ctx->buffer_pos = 16;
+  57:rng.c         ****     memset(ctx->buffer, 0x00, 16);
+  58:rng.c         **** 
+  59:rng.c         ****     return RNG_SUCCESS;
+  60:rng.c         **** }
+  61:rng.c         **** */
+  62:rng.c         **** /*
+  63:rng.c         ****  seedexpander()
+  64:rng.c         ****     ctx  - stores the current state of an instance of the seed expander
+  65:rng.c         ****     x    - returns the XOF data
+  66:rng.c         ****     xlen - number of bytes to return
+  67:rng.c         **** 
+  68:rng.c         **** int
+  69:rng.c         **** seedexpander(AES_XOF_struct *ctx, unsigned char *x, unsigned long xlen)
+  70:rng.c         **** {
+  71:rng.c         ****     unsigned long   offset;
+  72:rng.c         **** 
+  73:rng.c         ****     if ( x == NULL )
+  74:rng.c         ****         return RNG_BAD_OUTBUF;
+  75:rng.c         ****     if ( xlen >= ctx->length_remaining )
+  76:rng.c         ****         return RNG_BAD_REQ_LEN;
+  77:rng.c         **** 
+  78:rng.c         ****     ctx->length_remaining -= xlen;
+  79:rng.c         **** 
+  80:rng.c         ****     offset = 0;
+  81:rng.c         ****     while ( xlen > 0 ) {
+  82:rng.c         ****         if ( xlen <= (16-ctx->buffer_pos) ) { // buffer has what we need
+  83:rng.c         ****             memcpy(x+offset, ctx->buffer+ctx->buffer_pos, xlen);
+  84:rng.c         ****             ctx->buffer_pos += xlen;
+  85:rng.c         **** 
+  86:rng.c         ****             return RNG_SUCCESS;
+  87:rng.c         ****         }
+  88:rng.c         **** 
+  89:rng.c         ****         // take what's in the buffer
+  90:rng.c         ****         memcpy(x+offset, ctx->buffer+ctx->buffer_pos, 16-ctx->buffer_pos);
+  91:rng.c         ****         xlen -= 16-ctx->buffer_pos;
+  92:rng.c         ****         offset += 16-ctx->buffer_pos;
+  93:rng.c         **** 
+  94:rng.c         ****         AES256_ECB(ctx->key, ctx->ctr, ctx->buffer);
+  95:rng.c         ****         ctx->buffer_pos = 0;
+  96:rng.c         **** 
+  97:rng.c         ****         //increment the counter
+  98:rng.c         ****         for (int i=15; i>=12; i--) {
+  99:rng.c         ****             if ( ctx->ctr[i] == 0xff )
+ 100:rng.c         ****                 ctx->ctr[i] = 0x00;
+ 101:rng.c         ****             else {
+ 102:rng.c         ****                 ctx->ctr[i]++;
+ 103:rng.c         ****                 break;
+ 104:rng.c         ****             }
+ 105:rng.c         ****         }
+ 106:rng.c         **** 
+ 107:rng.c         ****     }
+ 108:rng.c         **** 
+ 109:rng.c         ****     return RNG_SUCCESS;
+ 110:rng.c         **** }
+ 111:rng.c         **** 
+ 112:rng.c         **** 
+ 113:rng.c         **** void handleErrors(void)
+ 114:rng.c         **** {
+ 115:rng.c         ****     ERR_print_errors_fp(stderr);
+ 116:rng.c         ****     abort();
+ 117:rng.c         **** }
+ 118:rng.c         **** 
+ 119:rng.c         **** // Use whatever AES implementation you have. This uses AES from openSSL library
+ 120:rng.c         **** //    key - 256-bit AES key
+ 121:rng.c         **** //    ctr - a 128-bit plaintext value
+ 122:rng.c         **** //    buffer - a 128-bit ciphertext value
+ 123:rng.c         **** void
+ 124:rng.c         **** AES256_ECB(unsigned char *key, unsigned char *ctr, unsigned char *buffer)
+ 125:rng.c         **** {
+ 126:rng.c         ****     EVP_CIPHER_CTX *ctx;
+ 127:rng.c         **** 
+ 128:rng.c         ****     int len;
+ 129:rng.c         **** 
+ 130:rng.c         ****     int ciphertext_len;
+ 131:rng.c         **** 
+ 132:rng.c         ****     // Create and initialise the context
+ 133:rng.c         ****     if(!(ctx = EVP_CIPHER_CTX_new())) handleErrors();
+ 134:rng.c         **** 
+ 135:rng.c         ****     if(1 != EVP_EncryptInit_ex(ctx, EVP_aes_256_ecb(), NULL, key, NULL))
+ 136:rng.c         ****         handleErrors();
+ 137:rng.c         **** 
+ 138:rng.c         ****     if(1 != EVP_EncryptUpdate(ctx, buffer, &len, ctr, 16))
+ 139:rng.c         ****         handleErrors();
+ 140:rng.c         ****     ciphertext_len = len;
+ 141:rng.c         **** 
+ 142:rng.c         ****     // Clean up 
+ 143:rng.c         ****     EVP_CIPHER_CTX_free(ctx);
+ 144:rng.c         **** }
+ 145:rng.c         **** 
+ 146:rng.c         **** void randombytes_init(unsigned char *entropy_input, unsigned char *personalization_string, int secu
+ 147:rng.c         **** {
+ 148:rng.c         ****     unsigned char   seed_material[48];
+ 149:rng.c         **** 
+ 150:rng.c         ****     memcpy(seed_material, entropy_input, 48);
+ 151:rng.c         ****     if (personalization_string)
+ 152:rng.c         ****         for (int i=0; i<48; i++)
+ 153:rng.c         ****             seed_material[i] ^= personalization_string[i];
+ 154:rng.c         ****     memset(DRBG_ctx.Key, 0x00, 32);
+ 155:rng.c         ****     memset(DRBG_ctx.V, 0x00, 16);
+ 156:rng.c         ****     AES256_CTR_DRBG_Update(seed_material, DRBG_ctx.Key, DRBG_ctx.V);
+ 157:rng.c         ****     DRBG_ctx.reseed_counter = 1;
+ 158:rng.c         **** }
+ 159:rng.c         **** */
+ 160:rng.c         **** 
+ 161:rng.c         **** int
+ 162:rng.c         **** randombytes(unsigned char *x, unsigned long long xlen)
+ 163:rng.c         **** {
+  28              		.loc 1 163 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 16
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+ 164:rng.c         ****     unsigned char   block[16] = {0};
+  32              		.loc 1 164 5 view .LVU1
+ 163:rng.c         ****     unsigned char   block[16] = {0};
+  33              		.loc 1 163 1 is_stmt 0 view .LVU2
+  34 0000 2DE9FF47 		push	{r0, r1, r2, r3, r4, r5, r6, r7, r8, r9, r10, lr}
+  35              	.LCFI0:
+  36              		.cfi_def_cfa_offset 48
+  37              		.cfi_offset 4, -32
+  38              		.cfi_offset 5, -28
+  39              		.cfi_offset 6, -24
+  40              		.cfi_offset 7, -20
+  41              		.cfi_offset 8, -16
+  42              		.cfi_offset 9, -12
+  43              		.cfi_offset 10, -8
+  44              		.cfi_offset 14, -4
+ 163:rng.c         ****     unsigned char   block[16] = {0};
+  45              		.loc 1 163 1 view .LVU3
+  46 0004 0446     		mov	r4, r0
+  47 0006 1646     		mov	r6, r2
+  48              		.loc 1 164 21 view .LVU4
+  49 0008 0021     		movs	r1, #0
+  50 000a 1022     		movs	r2, #16
+  51              	.LVL1:
+  52              		.loc 1 164 21 view .LVU5
+  53 000c 6846     		mov	r0, sp
+  54              	.LVL2:
+ 163:rng.c         ****     unsigned char   block[16] = {0};
+  55              		.loc 1 163 1 view .LVU6
+  56 000e 1F46     		mov	r7, r3
+  57              		.loc 1 164 21 view .LVU7
+  58 0010 FFF7FEFF 		bl	memset
+  59              	.LVL3:
+ 165:rng.c         ****     int             i = 0;
+  60              		.loc 1 165 5 is_stmt 1 view .LVU8
+ 166:rng.c         **** 
+ 167:rng.c         ****     while ( xlen > 0 ) {
+  61              		.loc 1 167 5 view .LVU9
+  62              	.LBB2:
+ 168:rng.c         ****         //increment V
+ 169:rng.c         ****         //for (int j=15; j>=0; j--) {
+ 170:rng.c         ****         //    if ( DRBG_ctx.V[j] == 0xff )
+ 171:rng.c         ****         //        DRBG_ctx.V[j] = 0x00;
+ 172:rng.c         ****         //    else {
+ 173:rng.c         ****         //        DRBG_ctx.V[j]++;
+ 174:rng.c         ****         //        break;
+ 175:rng.c         ****         //    }
+ 176:rng.c         ****         //}
+ 177:rng.c         ****         //AES256_ECB(DRBG_ctx.Key, DRBG_ctx.V, block);
+ 178:rng.c         ****        
+ 179:rng.c         ****         for (int x = 0; x < 16; x++) {
+ 180:rng.c         ****             block[x] = rand() % 0xFF;
+  63              		.loc 1 180 31 is_stmt 0 discriminator 1 view .LVU10
+  64 0014 4FF0FF09 		mov	r9, #255
+  65              	.LBE2:
+ 181:rng.c         ****         }
+ 182:rng.c         ****         if ( xlen > 15 ) {
+ 183:rng.c         ****             memcpy(x+i, block, 16);
+  66              		.loc 1 183 13 view .LVU11
+  67 0018 0DF11008 		add	r8, sp, #16
+  68              	.LVL4:
+  69              	.L2:
+ 167:rng.c         ****         //increment V
+  70              		.loc 1 167 18 is_stmt 1 view .LVU12
+  71 001c 56EA0703 		orrs	r3, r6, r7
+  72 0020 25D0     		beq	.L6
+  73 0022 EA46     		mov	r10, sp
+  74              	.LBB3:
+ 179:rng.c         ****             block[x] = rand() % 0xFF;
+  75              		.loc 1 179 18 is_stmt 0 view .LVU13
+  76 0024 0025     		movs	r5, #0
+  77              	.L3:
+  78              	.LVL5:
+ 180:rng.c         ****         }
+  79              		.loc 1 180 13 is_stmt 1 view .LVU14
+ 180:rng.c         ****         }
+  80              		.loc 1 180 24 is_stmt 0 view .LVU15
+  81 0026 FFF7FEFF 		bl	rand
+  82              	.LVL6:
+ 179:rng.c         ****             block[x] = rand() % 0xFF;
+  83              		.loc 1 179 34 discriminator 3 view .LVU16
+  84 002a 0135     		adds	r5, r5, #1
+  85              	.LVL7:
+ 180:rng.c         ****         }
+  86              		.loc 1 180 31 discriminator 1 view .LVU17
+  87 002c 90FBF9F3 		sdiv	r3, r0, r9
+ 179:rng.c         ****             block[x] = rand() % 0xFF;
+  88              		.loc 1 179 27 discriminator 1 view .LVU18
+  89 0030 102D     		cmp	r5, #16
+ 180:rng.c         ****         }
+  90              		.loc 1 180 31 discriminator 1 view .LVU19
+  91 0032 0344     		add	r3, r3, r0
+ 180:rng.c         ****         }
+  92              		.loc 1 180 22 discriminator 1 view .LVU20
+  93 0034 0AF8013B 		strb	r3, [r10], #1
+ 179:rng.c         ****             block[x] = rand() % 0xFF;
+  94              		.loc 1 179 34 is_stmt 1 discriminator 3 view .LVU21
+  95              	.LVL8:
+ 179:rng.c         ****             block[x] = rand() % 0xFF;
+  96              		.loc 1 179 27 discriminator 1 view .LVU22
+  97 0038 F5D1     		bne	.L3
+  98              	.LBE3:
+ 182:rng.c         ****             memcpy(x+i, block, 16);
+  99              		.loc 1 182 9 view .LVU23
+ 182:rng.c         ****             memcpy(x+i, block, 16);
+ 100              		.loc 1 182 12 is_stmt 0 view .LVU24
+ 101 003a 102E     		cmp	r6, #16
+ 102 003c 77F10003 		sbcs	r3, r7, #0
+ 103 0040 04F11002 		add	r2, r4, #16
+ 104 0044 0ED3     		bcc	.L4
+ 105              		.loc 1 183 13 is_stmt 1 view .LVU25
+ 106 0046 6B46     		mov	r3, sp
+ 107              	.LVL9:
+ 108              	.L5:
+ 109              		.loc 1 183 13 is_stmt 0 view .LVU26
+ 110 0048 1D46     		mov	r5, r3
+ 111 004a 03CD     		ldmia	r5!, {r0, r1}
+ 112 004c 4545     		cmp	r5, r8
+ 113 004e 2060     		str	r0, [r4]	@ unaligned
+ 114 0050 6160     		str	r1, [r4, #4]	@ unaligned
+ 115 0052 2B46     		mov	r3, r5
+ 116 0054 04F10804 		add	r4, r4, #8
+ 117 0058 F6D1     		bne	.L5
+ 184:rng.c         ****             i += 16;
+ 118              		.loc 1 184 13 is_stmt 1 view .LVU27
+ 119              	.LVL10:
+ 185:rng.c         ****             xlen -= 16;
+ 120              		.loc 1 185 13 view .LVU28
+ 121              		.loc 1 185 18 is_stmt 0 view .LVU29
+ 122 005a 103E     		subs	r6, r6, #16
+ 123              	.LVL11:
+ 124              		.loc 1 185 18 view .LVU30
+ 125 005c 67F10007 		sbc	r7, r7, #0
+ 126              	.LVL12:
+ 127              		.loc 1 185 18 view .LVU31
+ 128 0060 1446     		mov	r4, r2
+ 129 0062 DBE7     		b	.L2
+ 130              	.LVL13:
+ 131              	.L4:
+ 186:rng.c         ****         }
+ 187:rng.c         ****         else {
+ 188:rng.c         ****             memcpy(x+i, block, xlen);
+ 132              		.loc 1 188 13 is_stmt 1 view .LVU32
+ 133 0064 3246     		mov	r2, r6
+ 134 0066 6946     		mov	r1, sp
+ 135 0068 2046     		mov	r0, r4
+ 136 006a FFF7FEFF 		bl	memcpy
+ 137              	.LVL14:
+ 189:rng.c         ****             xlen = 0;
+ 138              		.loc 1 189 13 view .LVU33
+ 167:rng.c         ****         //increment V
+ 139              		.loc 1 167 18 view .LVU34
+ 140              	.L6:
+ 190:rng.c         ****         }
+ 191:rng.c         ****     }
+ 192:rng.c         **** 
+ 193:rng.c         **** 
+ 194:rng.c         ****     return 1;
+ 141              		.loc 1 194 5 view .LVU35
+ 195:rng.c         **** }
+ 142              		.loc 1 195 1 is_stmt 0 view .LVU36
+ 143 006e 0120     		movs	r0, #1
+ 144 0070 04B0     		add	sp, sp, #16
+ 145              	.LCFI1:
+ 146              		.cfi_def_cfa_offset 32
+ 147              		@ sp needed
+ 148 0072 BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ 149              		.loc 1 195 1 view .LVU37
+ 150              		.cfi_endproc
+ 151              	.LFE3:
+ 153              		.text
+ 154              	.Letext0:
+ 155              		.file 2 "<built-in>"
+ 156              		.file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+ 157              		.file 4 "/usr/include/newlib/string.h"
+ 158              		.file 5 "/usr/include/newlib/stdlib.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 rng.c
+     /tmp/ccqICW3y.s:19     .text.randombytes:00000000 $t
+     /tmp/ccqICW3y.s:25     .text.randombytes:00000000 randombytes
+
+UNDEFINED SYMBOLS
+memset
+rand
+memcpy

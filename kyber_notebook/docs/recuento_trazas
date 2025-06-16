@@ -1,0 +1,26 @@
+Generation_key:
+
+completo: 5240000
+randombytes_2: 5230000
+hash_h: 4595000
+for1184: 4565000
+pack_pk: 4525000
+pack_sk: 4430000
+polyvec_reduce: 4365000
+polyvec_add: 4330000
+for3_3: 3625000
+polyvec_ntt_2: 3185000
+polyvec_ntt: 2750000
+for3_2: 2475000
+for3: 2200000
+gen_a: 80000
+hash_g: 10000
+randombytes: 5000
+
+
+Decapsulate:
+
+completo: 7065000
+poly_sub:990000
+fqmul: 965000
+invntt: 780000

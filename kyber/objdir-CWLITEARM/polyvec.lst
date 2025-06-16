@@ -1,0 +1,1115 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"polyvec.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "polyvec.c"
+  18              		.section	.text.polyvec_compress,"ax",%progbits
+  19              		.align	1
+  20              		.global	polyvec_compress
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	polyvec_compress:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:polyvec.c     **** #include <stdint.h>
+   2:polyvec.c     **** #include "params.h"
+   3:polyvec.c     **** #include "poly.h"
+   4:polyvec.c     **** #include "polyvec.h"
+   5:polyvec.c     **** 
+   6:polyvec.c     **** /*************************************************
+   7:polyvec.c     **** * Name:        polyvec_compress
+   8:polyvec.c     **** *
+   9:polyvec.c     **** * Description: Compress and serialize vector of polynomials
+  10:polyvec.c     **** *
+  11:polyvec.c     **** * Arguments:   - uint8_t *r: pointer to output byte array
+  12:polyvec.c     **** *                            (needs space for KYBER_POLYVECCOMPRESSEDBYTES)
+  13:polyvec.c     **** *              - const polyvec *a: pointer to input vector of polynomials
+  14:polyvec.c     **** **************************************************/
+  15:polyvec.c     **** void polyvec_compress(uint8_t r[KYBER_POLYVECCOMPRESSEDBYTES], const polyvec *a)
+  16:polyvec.c     **** {
+  28              		.loc 1 16 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 8
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  17:polyvec.c     ****   unsigned int i,j,k;
+  32              		.loc 1 17 3 view .LVU1
+  18:polyvec.c     ****   uint64_t d0;
+  33              		.loc 1 18 3 view .LVU2
+  19:polyvec.c     **** 
+  20:polyvec.c     **** #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
+  21:polyvec.c     ****   uint16_t t[8];
+  22:polyvec.c     ****   for(i=0;i<KYBER_K;i++) {
+  23:polyvec.c     ****     for(j=0;j<KYBER_N/8;j++) {
+  24:polyvec.c     ****       for(k=0;k<8;k++) {
+  25:polyvec.c     ****         t[k]  = a->vec[i].coeffs[8*j+k];
+  26:polyvec.c     ****         t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
+  27:polyvec.c     **** /*      t[k]  = ((((uint32_t)t[k] << 11) + KYBER_Q/2)/KYBER_Q) & 0x7ff; */
+  28:polyvec.c     ****         d0 = t[k];
+  29:polyvec.c     ****         d0 <<= 11;
+  30:polyvec.c     ****         d0 += 1664;
+  31:polyvec.c     ****         d0 *= 645084;
+  32:polyvec.c     ****         d0 >>= 31;
+  33:polyvec.c     ****         t[k] = d0 & 0x7ff;
+  34:polyvec.c     ****       }
+  35:polyvec.c     **** 
+  36:polyvec.c     ****       r[ 0] = (t[0] >>  0);
+  37:polyvec.c     ****       r[ 1] = (t[0] >>  8) | (t[1] << 3);
+  38:polyvec.c     ****       r[ 2] = (t[1] >>  5) | (t[2] << 6);
+  39:polyvec.c     ****       r[ 3] = (t[2] >>  2);
+  40:polyvec.c     ****       r[ 4] = (t[2] >> 10) | (t[3] << 1);
+  41:polyvec.c     ****       r[ 5] = (t[3] >>  7) | (t[4] << 4);
+  42:polyvec.c     ****       r[ 6] = (t[4] >>  4) | (t[5] << 7);
+  43:polyvec.c     ****       r[ 7] = (t[5] >>  1);
+  44:polyvec.c     ****       r[ 8] = (t[5] >>  9) | (t[6] << 2);
+  45:polyvec.c     ****       r[ 9] = (t[6] >>  6) | (t[7] << 5);
+  46:polyvec.c     ****       r[10] = (t[7] >>  3);
+  47:polyvec.c     ****       r += 11;
+  48:polyvec.c     ****     }
+  49:polyvec.c     ****   }
+  50:polyvec.c     **** #elif (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
+  51:polyvec.c     ****   uint16_t t[4];
+  34              		.loc 1 51 3 view .LVU3
+  52:polyvec.c     ****   for(i=0;i<KYBER_K;i++) {
+  35              		.loc 1 52 3 view .LVU4
+  36              		.loc 1 52 12 discriminator 1 view .LVU5
+  16:polyvec.c     ****   unsigned int i,j,k;
+  37              		.loc 1 16 1 is_stmt 0 view .LVU6
+  38 0000 2DE9F74F 		push	{r0, r1, r2, r4, r5, r6, r7, r8, r9, r10, fp, lr}
+  39              	.LCFI0:
+  40              		.cfi_def_cfa_offset 48
+  41              		.cfi_offset 4, -36
+  42              		.cfi_offset 5, -32
+  43              		.cfi_offset 6, -28
+  44              		.cfi_offset 7, -24
+  45              		.cfi_offset 8, -20
+  46              		.cfi_offset 9, -16
+  47              		.cfi_offset 10, -12
+  48              		.cfi_offset 11, -8
+  49              		.cfi_offset 14, -4
+  16:polyvec.c     ****   unsigned int i,j,k;
+  50              		.loc 1 16 1 view .LVU7
+  51 0004 8B46     		mov	fp, r1
+  53:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+  54:polyvec.c     ****       for(k=0;k<4;k++) {
+  55:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+  56:polyvec.c     ****         t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
+  52              		.loc 1 56 39 view .LVU8
+  53 0006 40F60159 		movw	r9, #3329
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+  54              		.loc 1 54 12 view .LVU9
+  55 000a 0021     		movs	r1, #0
+  56              	.LVL1:
+  57              	.L2:
+  53:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+  58              		.loc 1 53 14 is_stmt 1 discriminator 1 view .LVU10
+  59 000c 421D     		adds	r2, r0, #5
+  60 000e 0BEBC105 		add	r5, fp, r1, lsl #3
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+  61              		.loc 1 54 12 is_stmt 0 view .LVU11
+  62 0012 0024     		movs	r4, #0
+  63 0014 3FE0     		b	.L6
+  64              	.LVL2:
+  65              	.L3:
+  55:polyvec.c     ****         t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
+  66              		.loc 1 55 9 is_stmt 1 view .LVU12
+  55:polyvec.c     ****         t[k] += ((int16_t)t[k] >> 15) & KYBER_Q;
+  67              		.loc 1 55 33 is_stmt 0 view .LVU13
+  68 0016 3EF902AB 		ldrsh	r10, [lr], #2
+  69              		.loc 1 56 9 is_stmt 1 view .LVU14
+  57:polyvec.c     **** /*      t[k]  = ((((uint32_t)t[k] << 10) + KYBER_Q/2)/ KYBER_Q) & 0x3ff; */
+  58:polyvec.c     ****         d0 = t[k];
+  70              		.loc 1 58 9 view .LVU15
+  56:polyvec.c     **** /*      t[k]  = ((((uint32_t)t[k] << 10) + KYBER_Q/2)/ KYBER_Q) & 0x3ff; */
+  71              		.loc 1 56 39 is_stmt 0 view .LVU16
+  72 001a 09EAEA73 		and	r3, r9, r10, asr #31
+  56:polyvec.c     **** /*      t[k]  = ((((uint32_t)t[k] << 10) + KYBER_Q/2)/ KYBER_Q) & 0x3ff; */
+  73              		.loc 1 56 14 view .LVU17
+  74 001e 5344     		add	r3, r3, r10
+  75              		.loc 1 58 12 view .LVU18
+  76 0020 9BB2     		uxth	r3, r3
+  77              	.LVL3:
+  59:polyvec.c     ****         d0 <<= 10;
+  78              		.loc 1 59 9 is_stmt 1 view .LVU19
+  60:polyvec.c     ****         d0 += 1665;
+  79              		.loc 1 60 12 is_stmt 0 view .LVU20
+  80 0022 40F28166 		movw	r6, #1665
+  59:polyvec.c     ****         d0 <<= 10;
+  81              		.loc 1 59 12 view .LVU21
+  82 0026 9B02     		lsls	r3, r3, #10
+  83              	.LVL4:
+  84              		.loc 1 60 9 is_stmt 1 view .LVU22
+  85              		.loc 1 60 12 is_stmt 0 view .LVU23
+  86 0028 9B19     		adds	r3, r3, r6
+  87              	.LVL5:
+  61:polyvec.c     ****         d0 *= 1290167;
+  88              		.loc 1 61 12 view .LVU24
+  89 002a 214E     		ldr	r6, .L8
+  60:polyvec.c     ****         d0 += 1665;
+  90              		.loc 1 60 12 view .LVU25
+  91 002c 2CBF     		ite	cs
+  92 002e 4FF0010A 		movcs	r10, #1
+  93 0032 4FF0000A 		movcc	r10, #0
+  94              	.LVL6:
+  95              		.loc 1 61 9 is_stmt 1 view .LVU26
+  96              		.loc 1 61 12 is_stmt 0 view .LVU27
+  97 0036 A3FB06C3 		umull	ip, r3, r3, r6
+  98              	.LVL7:
+  99              		.loc 1 61 12 view .LVU28
+ 100 003a 06FB0A33 		mla	r3, r6, r10, r3
+ 101              	.LVL8:
+  62:polyvec.c     ****         d0 >>= 32;
+ 102              		.loc 1 62 9 is_stmt 1 view .LVU29
+  63:polyvec.c     ****         t[k] = d0 & 0x3ff;
+ 103              		.loc 1 63 9 view .LVU30
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+ 104              		.loc 1 54 20 is_stmt 0 discriminator 3 view .LVU31
+ 105 003e 0137     		adds	r7, r7, #1
+ 106              	.LVL9:
+ 107              		.loc 1 63 19 view .LVU32
+ 108 0040 C3F30903 		ubfx	r3, r3, #0, #10
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+ 109              		.loc 1 54 16 discriminator 1 view .LVU33
+ 110 0044 042F     		cmp	r7, #4
+ 111              		.loc 1 63 14 view .LVU34
+ 112 0046 28F8023B 		strh	r3, [r8], #2	@ movhi
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+ 113              		.loc 1 54 20 is_stmt 1 discriminator 3 view .LVU35
+ 114              	.LVL10:
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+ 115              		.loc 1 54 16 discriminator 1 view .LVU36
+ 116 004a E4D1     		bne	.L3
+  64:polyvec.c     ****       }
+  65:polyvec.c     **** 
+  66:polyvec.c     ****       r[0] = (t[0] >> 0);
+ 117              		.loc 1 66 7 view .LVU37
+  67:polyvec.c     ****       r[1] = (t[0] >> 8) | (t[1] << 2);
+ 118              		.loc 1 67 30 is_stmt 0 view .LVU38
+ 119 004c BDF80270 		ldrh	r7, [sp, #2]
+ 120              	.LVL11:
+  66:polyvec.c     ****       r[1] = (t[0] >> 8) | (t[1] << 2);
+ 121              		.loc 1 66 16 view .LVU39
+ 122 0050 BDF800E0 		ldrh	lr, [sp]
+  66:polyvec.c     ****       r[1] = (t[0] >> 8) | (t[1] << 2);
+ 123              		.loc 1 66 12 view .LVU40
+ 124 0054 02F805EC 		strb	lr, [r2, #-5]
+ 125              		.loc 1 67 7 is_stmt 1 view .LVU41
+ 126              		.loc 1 67 26 is_stmt 0 view .LVU42
+ 127 0058 BB00     		lsls	r3, r7, #2
+ 128 005a 43EA1E23 		orr	r3, r3, lr, lsr #8
+  68:polyvec.c     ****       r[2] = (t[1] >> 6) | (t[2] << 4);
+ 129              		.loc 1 68 30 view .LVU43
+ 130 005e BDF804E0 		ldrh	lr, [sp, #4]
+  67:polyvec.c     ****       r[1] = (t[0] >> 8) | (t[1] << 2);
+ 131              		.loc 1 67 12 view .LVU44
+ 132 0062 02F8043C 		strb	r3, [r2, #-4]
+ 133              		.loc 1 68 7 is_stmt 1 view .LVU45
+ 134              		.loc 1 68 26 is_stmt 0 view .LVU46
+ 135 0066 4FEA0E13 		lsl	r3, lr, #4
+ 136 006a 43EA9713 		orr	r3, r3, r7, lsr #6
+ 137              		.loc 1 68 12 view .LVU47
+ 138 006e 02F8033C 		strb	r3, [r2, #-3]
+  69:polyvec.c     ****       r[3] = (t[2] >> 4) | (t[3] << 6);
+ 139              		.loc 1 69 7 is_stmt 1 view .LVU48
+ 140              		.loc 1 69 30 is_stmt 0 view .LVU49
+ 141 0072 BDF80630 		ldrh	r3, [sp, #6]
+  53:polyvec.c     ****       for(k=0;k<4;k++) {
+ 142              		.loc 1 53 14 discriminator 1 view .LVU50
+ 143 0076 0434     		adds	r4, r4, #4
+ 144              		.loc 1 69 26 view .LVU51
+ 145 0078 9F01     		lsls	r7, r3, #6
+ 146 007a 47EA1E17 		orr	r7, r7, lr, lsr #4
+  70:polyvec.c     ****       r[4] = (t[3] >> 2);
+ 147              		.loc 1 70 12 view .LVU52
+ 148 007e 9B08     		lsrs	r3, r3, #2
+  53:polyvec.c     ****       for(k=0;k<4;k++) {
+ 149              		.loc 1 53 14 discriminator 1 view .LVU53
+ 150 0080 B4F5807F 		cmp	r4, #256
+  69:polyvec.c     ****       r[3] = (t[2] >> 4) | (t[3] << 6);
+ 151              		.loc 1 69 12 view .LVU54
+ 152 0084 02F8027C 		strb	r7, [r2, #-2]
+ 153              		.loc 1 70 7 is_stmt 1 view .LVU55
+ 154              		.loc 1 70 12 is_stmt 0 view .LVU56
+ 155 0088 02F8013C 		strb	r3, [r2, #-1]
+  71:polyvec.c     ****       r += 5;
+ 156              		.loc 1 71 7 is_stmt 1 view .LVU57
+ 157              	.LVL12:
+  53:polyvec.c     ****       for(k=0;k<4;k++) {
+ 158              		.loc 1 53 26 discriminator 2 view .LVU58
+  53:polyvec.c     ****       for(k=0;k<4;k++) {
+ 159              		.loc 1 53 14 discriminator 1 view .LVU59
+ 160 008c 05F10805 		add	r5, r5, #8
+ 161 0090 02F10502 		add	r2, r2, #5
+ 162              	.LVL13:
+  53:polyvec.c     ****       for(k=0;k<4;k++) {
+ 163              		.loc 1 53 14 is_stmt 0 discriminator 1 view .LVU60
+ 164 0094 03D0     		beq	.L4
+ 165              	.LVL14:
+ 166              	.L6:
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+ 167              		.loc 1 54 16 is_stmt 1 discriminator 1 view .LVU61
+ 168 0096 E846     		mov	r8, sp
+  16:polyvec.c     ****   unsigned int i,j,k;
+ 169              		.loc 1 16 1 is_stmt 0 view .LVU62
+ 170 0098 AE46     		mov	lr, r5
+  54:polyvec.c     ****         t[k]  = a->vec[i].coeffs[4*j+k];
+ 171              		.loc 1 54 12 view .LVU63
+ 172 009a 0027     		movs	r7, #0
+ 173 009c BBE7     		b	.L3
+ 174              	.LVL15:
+ 175              	.L4:
+  52:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 176              		.loc 1 52 12 discriminator 1 view .LVU64
+ 177 009e 4031     		adds	r1, r1, #64
+ 178 00a0 C029     		cmp	r1, #192
+ 179 00a2 00F5A070 		add	r0, r0, #320
+  52:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 180              		.loc 1 52 22 is_stmt 1 discriminator 2 view .LVU65
+ 181              	.LVL16:
+  52:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 182              		.loc 1 52 12 discriminator 1 view .LVU66
+ 183 00a6 B1D1     		bne	.L2
+  72:polyvec.c     ****     }
+  73:polyvec.c     ****   }
+  74:polyvec.c     **** #else
+  75:polyvec.c     **** #error "KYBER_POLYVECCOMPRESSEDBYTES needs to be in {320*KYBER_K, 352*KYBER_K}"
+  76:polyvec.c     **** #endif
+  77:polyvec.c     **** }
+ 184              		.loc 1 77 1 is_stmt 0 view .LVU67
+ 185 00a8 03B0     		add	sp, sp, #12
+ 186              	.LCFI1:
+ 187              		.cfi_def_cfa_offset 36
+ 188              		@ sp needed
+ 189 00aa BDE8F08F 		pop	{r4, r5, r6, r7, r8, r9, r10, fp, pc}
+ 190              	.LVL17:
+ 191              	.L9:
+ 192              		.loc 1 77 1 view .LVU68
+ 193 00ae 00BF     		.align	2
+ 194              	.L8:
+ 195 00b0 B7AF1300 		.word	1290167
+ 196              		.cfi_endproc
+ 197              	.LFE0:
+ 199              		.section	.text.polyvec_decompress,"ax",%progbits
+ 200              		.align	1
+ 201              		.global	polyvec_decompress
+ 202              		.syntax unified
+ 203              		.thumb
+ 204              		.thumb_func
+ 206              	polyvec_decompress:
+ 207              	.LVL18:
+ 208              	.LFB1:
+  78:polyvec.c     **** 
+  79:polyvec.c     **** /*************************************************
+  80:polyvec.c     **** * Name:        polyvec_decompress
+  81:polyvec.c     **** *
+  82:polyvec.c     **** * Description: De-serialize and decompress vector of polynomials;
+  83:polyvec.c     **** *              approximate inverse of polyvec_compress
+  84:polyvec.c     **** *
+  85:polyvec.c     **** * Arguments:   - polyvec *r:       pointer to output vector of polynomials
+  86:polyvec.c     **** *              - const uint8_t *a: pointer to input byte array
+  87:polyvec.c     **** *                                  (of length KYBER_POLYVECCOMPRESSEDBYTES)
+  88:polyvec.c     **** **************************************************/
+  89:polyvec.c     **** void polyvec_decompress(polyvec *r, const uint8_t a[KYBER_POLYVECCOMPRESSEDBYTES])
+  90:polyvec.c     **** {
+ 209              		.loc 1 90 1 is_stmt 1 view -0
+ 210              		.cfi_startproc
+ 211              		@ args = 0, pretend = 0, frame = 8
+ 212              		@ frame_needed = 0, uses_anonymous_args = 0
+  91:polyvec.c     ****   unsigned int i,j,k;
+ 213              		.loc 1 91 3 view .LVU70
+  92:polyvec.c     **** 
+  93:polyvec.c     **** #if (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 352))
+  94:polyvec.c     ****   uint16_t t[8];
+  95:polyvec.c     ****   for(i=0;i<KYBER_K;i++) {
+  96:polyvec.c     ****     for(j=0;j<KYBER_N/8;j++) {
+  97:polyvec.c     ****       t[0] = (a[0] >> 0) | ((uint16_t)a[ 1] << 8);
+  98:polyvec.c     ****       t[1] = (a[1] >> 3) | ((uint16_t)a[ 2] << 5);
+  99:polyvec.c     ****       t[2] = (a[2] >> 6) | ((uint16_t)a[ 3] << 2) | ((uint16_t)a[4] << 10);
+ 100:polyvec.c     ****       t[3] = (a[4] >> 1) | ((uint16_t)a[ 5] << 7);
+ 101:polyvec.c     ****       t[4] = (a[5] >> 4) | ((uint16_t)a[ 6] << 4);
+ 102:polyvec.c     ****       t[5] = (a[6] >> 7) | ((uint16_t)a[ 7] << 1) | ((uint16_t)a[8] << 9);
+ 103:polyvec.c     ****       t[6] = (a[8] >> 2) | ((uint16_t)a[ 9] << 6);
+ 104:polyvec.c     ****       t[7] = (a[9] >> 5) | ((uint16_t)a[10] << 3);
+ 105:polyvec.c     ****       a += 11;
+ 106:polyvec.c     **** 
+ 107:polyvec.c     ****       for(k=0;k<8;k++)
+ 108:polyvec.c     ****         r->vec[i].coeffs[8*j+k] = ((uint32_t)(t[k] & 0x7FF)*KYBER_Q + 1024) >> 11;
+ 109:polyvec.c     ****     }
+ 110:polyvec.c     ****   }
+ 111:polyvec.c     **** #elif (KYBER_POLYVECCOMPRESSEDBYTES == (KYBER_K * 320))
+ 112:polyvec.c     ****   uint16_t t[4];
+ 214              		.loc 1 112 3 view .LVU71
+ 113:polyvec.c     ****   for(i=0;i<KYBER_K;i++) {
+ 215              		.loc 1 113 3 view .LVU72
+ 216              		.loc 1 113 12 discriminator 1 view .LVU73
+  90:polyvec.c     ****   unsigned int i,j,k;
+ 217              		.loc 1 90 1 is_stmt 0 view .LVU74
+ 218 0000 2DE9F341 		push	{r0, r1, r4, r5, r6, r7, r8, lr}
+ 219              	.LCFI2:
+ 220              		.cfi_def_cfa_offset 32
+ 221              		.cfi_offset 4, -24
+ 222              		.cfi_offset 5, -20
+ 223              		.cfi_offset 6, -16
+ 224              		.cfi_offset 7, -12
+ 225              		.cfi_offset 8, -8
+ 226              		.cfi_offset 14, -4
+ 114:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 115:polyvec.c     ****       t[0] = (a[0] >> 0) | ((uint16_t)a[1] << 8);
+ 116:polyvec.c     ****       t[1] = (a[1] >> 2) | ((uint16_t)a[2] << 6);
+ 117:polyvec.c     ****       t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
+ 118:polyvec.c     ****       t[3] = (a[3] >> 6) | ((uint16_t)a[4] << 2);
+ 119:polyvec.c     ****       a += 5;
+ 120:polyvec.c     **** 
+ 121:polyvec.c     ****       for(k=0;k<4;k++)
+ 227              		.loc 1 121 12 view .LVU75
+ 228 0004 0024     		movs	r4, #0
+ 122:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 229              		.loc 1 122 60 view .LVU76
+ 230 0006 40F60158 		movw	r8, #3329
+ 231              	.LVL19:
+ 232              	.L11:
+ 233              		.loc 1 122 60 view .LVU77
+ 234 000a 04EB8403 		add	r3, r4, r4, lsl #2
+ 235 000e 0B44     		add	r3, r3, r1
+ 236              	.LVL20:
+ 114:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 237              		.loc 1 114 14 is_stmt 1 discriminator 1 view .LVU78
+ 238 0010 00EBC406 		add	r6, r0, r4, lsl #3
+  90:polyvec.c     ****   unsigned int i,j,k;
+ 239              		.loc 1 90 1 is_stmt 0 view .LVU79
+ 240 0014 0025     		movs	r5, #0
+ 241              	.LVL21:
+ 242              	.L13:
+ 115:polyvec.c     ****       t[1] = (a[1] >> 2) | ((uint16_t)a[2] << 6);
+ 243              		.loc 1 115 7 is_stmt 1 view .LVU80
+ 116:polyvec.c     ****       t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
+ 244              		.loc 1 116 40 is_stmt 0 view .LVU81
+ 245 0016 93F802C0 		ldrb	ip, [r3, #2]	@ zero_extendqisi2
+ 115:polyvec.c     ****       t[1] = (a[1] >> 2) | ((uint16_t)a[2] << 6);
+ 246              		.loc 1 115 40 view .LVU82
+ 247 001a 5F78     		ldrb	r7, [r3, #1]	@ zero_extendqisi2
+ 115:polyvec.c     ****       t[1] = (a[1] >> 2) | ((uint16_t)a[2] << 6);
+ 248              		.loc 1 115 12 view .LVU83
+ 249 001c 1A88     		ldrh	r2, [r3]	@ unaligned
+ 250 001e ADF80020 		strh	r2, [sp]	@ movhi
+ 116:polyvec.c     ****       t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
+ 251              		.loc 1 116 7 is_stmt 1 view .LVU84
+ 116:polyvec.c     ****       t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
+ 252              		.loc 1 116 26 is_stmt 0 view .LVU85
+ 253 0022 4FEA8C12 		lsl	r2, ip, #6
+ 254 0026 42EA9702 		orr	r2, r2, r7, lsr #2
+ 116:polyvec.c     ****       t[2] = (a[2] >> 4) | ((uint16_t)a[3] << 4);
+ 255              		.loc 1 116 12 view .LVU86
+ 256 002a ADF80220 		strh	r2, [sp, #2]	@ movhi
+ 117:polyvec.c     ****       t[3] = (a[3] >> 6) | ((uint16_t)a[4] << 2);
+ 257              		.loc 1 117 7 is_stmt 1 view .LVU87
+ 117:polyvec.c     ****       t[3] = (a[3] >> 6) | ((uint16_t)a[4] << 2);
+ 258              		.loc 1 117 40 is_stmt 0 view .LVU88
+ 259 002e DA78     		ldrb	r2, [r3, #3]	@ zero_extendqisi2
+ 117:polyvec.c     ****       t[3] = (a[3] >> 6) | ((uint16_t)a[4] << 2);
+ 260              		.loc 1 117 26 view .LVU89
+ 261 0030 1701     		lsls	r7, r2, #4
+ 262 0032 47EA1C17 		orr	r7, r7, ip, lsr #4
+ 117:polyvec.c     ****       t[3] = (a[3] >> 6) | ((uint16_t)a[4] << 2);
+ 263              		.loc 1 117 12 view .LVU90
+ 264 0036 ADF80470 		strh	r7, [sp, #4]	@ movhi
+ 118:polyvec.c     ****       a += 5;
+ 265              		.loc 1 118 7 is_stmt 1 view .LVU91
+ 118:polyvec.c     ****       a += 5;
+ 266              		.loc 1 118 26 is_stmt 0 view .LVU92
+ 267 003a 1F79     		ldrb	r7, [r3, #4]	@ zero_extendqisi2
+ 268 003c 9209     		lsrs	r2, r2, #6
+ 269 003e 42EA8702 		orr	r2, r2, r7, lsl #2
+ 118:polyvec.c     ****       a += 5;
+ 270              		.loc 1 118 12 view .LVU93
+ 271 0042 ADF80620 		strh	r2, [sp, #6]	@ movhi
+ 119:polyvec.c     **** 
+ 272              		.loc 1 119 7 is_stmt 1 view .LVU94
+ 119:polyvec.c     **** 
+ 273              		.loc 1 119 9 is_stmt 0 view .LVU95
+ 274 0046 0533     		adds	r3, r3, #5
+ 275              	.LVL22:
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 276              		.loc 1 121 7 is_stmt 1 view .LVU96
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 277              		.loc 1 121 16 discriminator 1 view .LVU97
+ 278 0048 EE46     		mov	lr, sp
+ 119:polyvec.c     **** 
+ 279              		.loc 1 119 9 is_stmt 0 view .LVU98
+ 280 004a B446     		mov	ip, r6
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 281              		.loc 1 121 12 view .LVU99
+ 282 004c 0027     		movs	r7, #0
+ 283              	.LVL23:
+ 284              	.L12:
+ 285              		.loc 1 122 9 is_stmt 1 view .LVU100
+ 286              		.loc 1 122 48 is_stmt 0 view .LVU101
+ 287 004e 3EF8022B 		ldrh	r2, [lr], #2
+ 288              		.loc 1 122 36 view .LVU102
+ 289 0052 C2F30902 		ubfx	r2, r2, #0, #10
+ 290              		.loc 1 122 60 view .LVU103
+ 291 0056 08FB02F2 		mul	r2, r8, r2
+ 292              		.loc 1 122 69 view .LVU104
+ 293 005a 02F50072 		add	r2, r2, #512
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 294              		.loc 1 121 20 discriminator 3 view .LVU105
+ 295 005e 0137     		adds	r7, r7, #1
+ 296              	.LVL24:
+ 297              		.loc 1 122 76 view .LVU106
+ 298 0060 920A     		lsrs	r2, r2, #10
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 299              		.loc 1 121 16 discriminator 1 view .LVU107
+ 300 0062 042F     		cmp	r7, #4
+ 301              		.loc 1 122 33 view .LVU108
+ 302 0064 2CF8022B 		strh	r2, [ip], #2	@ movhi
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 303              		.loc 1 121 20 is_stmt 1 discriminator 3 view .LVU109
+ 304              	.LVL25:
+ 121:polyvec.c     ****         r->vec[i].coeffs[4*j+k] = ((uint32_t)(t[k] & 0x3FF)*KYBER_Q + 512) >> 10;
+ 305              		.loc 1 121 16 discriminator 1 view .LVU110
+ 306 0068 F1D1     		bne	.L12
+ 114:polyvec.c     ****       t[0] = (a[0] >> 0) | ((uint16_t)a[1] << 8);
+ 307              		.loc 1 114 26 discriminator 2 view .LVU111
+ 114:polyvec.c     ****       t[0] = (a[0] >> 0) | ((uint16_t)a[1] << 8);
+ 308              		.loc 1 114 14 discriminator 1 view .LVU112
+ 309 006a 0435     		adds	r5, r5, #4
+ 310 006c B5F5807F 		cmp	r5, #256
+ 311 0070 06F10806 		add	r6, r6, #8
+ 312 0074 CFD1     		bne	.L13
+ 113:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 313              		.loc 1 113 22 discriminator 2 view .LVU113
+ 314              	.LVL26:
+ 113:polyvec.c     ****     for(j=0;j<KYBER_N/4;j++) {
+ 315              		.loc 1 113 12 discriminator 1 view .LVU114
+ 316 0076 4034     		adds	r4, r4, #64
+ 317 0078 C02C     		cmp	r4, #192
+ 318 007a C6D1     		bne	.L11
+ 123:polyvec.c     ****     }
+ 124:polyvec.c     ****   }
+ 125:polyvec.c     **** #else
+ 126:polyvec.c     **** #error "KYBER_POLYVECCOMPRESSEDBYTES needs to be in {320*KYBER_K, 352*KYBER_K}"
+ 127:polyvec.c     **** #endif
+ 128:polyvec.c     **** }
+ 319              		.loc 1 128 1 is_stmt 0 view .LVU115
+ 320 007c 02B0     		add	sp, sp, #8
+ 321              	.LCFI3:
+ 322              		.cfi_def_cfa_offset 24
+ 323              		@ sp needed
+ 324 007e BDE8F081 		pop	{r4, r5, r6, r7, r8, pc}
+ 325              		.loc 1 128 1 view .LVU116
+ 326              		.cfi_endproc
+ 327              	.LFE1:
+ 329              		.section	.text.polyvec_tobytes,"ax",%progbits
+ 330              		.align	1
+ 331              		.global	polyvec_tobytes
+ 332              		.syntax unified
+ 333              		.thumb
+ 334              		.thumb_func
+ 336              	polyvec_tobytes:
+ 337              	.LVL27:
+ 338              	.LFB2:
+ 129:polyvec.c     **** 
+ 130:polyvec.c     **** /*************************************************
+ 131:polyvec.c     **** * Name:        polyvec_tobytes
+ 132:polyvec.c     **** *
+ 133:polyvec.c     **** * Description: Serialize vector of polynomials
+ 134:polyvec.c     **** *
+ 135:polyvec.c     **** * Arguments:   - uint8_t *r: pointer to output byte array
+ 136:polyvec.c     **** *                            (needs space for KYBER_POLYVECBYTES)
+ 137:polyvec.c     **** *              - const polyvec *a: pointer to input vector of polynomials
+ 138:polyvec.c     **** **************************************************/
+ 139:polyvec.c     **** void polyvec_tobytes(uint8_t r[KYBER_POLYVECBYTES], const polyvec *a)
+ 140:polyvec.c     **** {
+ 339              		.loc 1 140 1 is_stmt 1 view -0
+ 340              		.cfi_startproc
+ 341              		@ args = 0, pretend = 0, frame = 0
+ 342              		@ frame_needed = 0, uses_anonymous_args = 0
+ 141:polyvec.c     ****   unsigned int i;
+ 343              		.loc 1 141 3 view .LVU118
+ 142:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 344              		.loc 1 142 3 view .LVU119
+ 345              		.loc 1 142 12 discriminator 1 view .LVU120
+ 143:polyvec.c     ****     poly_tobytes(r+i*KYBER_POLYBYTES, &a->vec[i]);
+ 346              		.loc 1 143 5 view .LVU121
+ 140:polyvec.c     ****   unsigned int i;
+ 347              		.loc 1 140 1 is_stmt 0 view .LVU122
+ 348 0000 38B5     		push	{r3, r4, r5, lr}
+ 349              	.LCFI4:
+ 350              		.cfi_def_cfa_offset 16
+ 351              		.cfi_offset 3, -16
+ 352              		.cfi_offset 4, -12
+ 353              		.cfi_offset 5, -8
+ 354              		.cfi_offset 14, -4
+ 140:polyvec.c     ****   unsigned int i;
+ 355              		.loc 1 140 1 view .LVU123
+ 356 0002 0446     		mov	r4, r0
+ 357 0004 0D46     		mov	r5, r1
+ 358              		.loc 1 143 5 view .LVU124
+ 359 0006 FFF7FEFF 		bl	poly_tobytes
+ 360              	.LVL28:
+ 142:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 361              		.loc 1 142 22 is_stmt 1 discriminator 3 view .LVU125
+ 142:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 362              		.loc 1 142 12 discriminator 1 view .LVU126
+ 363              		.loc 1 143 5 view .LVU127
+ 364 000a 05F50071 		add	r1, r5, #512
+ 365 000e 04F5C070 		add	r0, r4, #384
+ 366 0012 FFF7FEFF 		bl	poly_tobytes
+ 367              	.LVL29:
+ 142:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 368              		.loc 1 142 22 discriminator 3 view .LVU128
+ 142:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 369              		.loc 1 142 12 discriminator 1 view .LVU129
+ 370              		.loc 1 143 5 view .LVU130
+ 371 0016 05F58061 		add	r1, r5, #1024
+ 372 001a 04F54070 		add	r0, r4, #768
+ 144:polyvec.c     **** }
+ 373              		.loc 1 144 1 is_stmt 0 view .LVU131
+ 374 001e BDE83840 		pop	{r3, r4, r5, lr}
+ 375              	.LCFI5:
+ 376              		.cfi_restore 14
+ 377              		.cfi_restore 5
+ 378              		.cfi_restore 4
+ 379              		.cfi_restore 3
+ 380              		.cfi_def_cfa_offset 0
+ 381              	.LVL30:
+ 143:polyvec.c     ****     poly_tobytes(r+i*KYBER_POLYBYTES, &a->vec[i]);
+ 382              		.loc 1 143 5 view .LVU132
+ 383 0022 FFF7FEBF 		b	poly_tobytes
+ 384              	.LVL31:
+ 143:polyvec.c     ****     poly_tobytes(r+i*KYBER_POLYBYTES, &a->vec[i]);
+ 385              		.loc 1 143 5 view .LVU133
+ 386              		.cfi_endproc
+ 387              	.LFE2:
+ 389              		.section	.text.polyvec_frombytes,"ax",%progbits
+ 390              		.align	1
+ 391              		.global	polyvec_frombytes
+ 392              		.syntax unified
+ 393              		.thumb
+ 394              		.thumb_func
+ 396              	polyvec_frombytes:
+ 397              	.LVL32:
+ 398              	.LFB3:
+ 145:polyvec.c     **** 
+ 146:polyvec.c     **** /*************************************************
+ 147:polyvec.c     **** * Name:        polyvec_frombytes
+ 148:polyvec.c     **** *
+ 149:polyvec.c     **** * Description: De-serialize vector of polynomials;
+ 150:polyvec.c     **** *              inverse of polyvec_tobytes
+ 151:polyvec.c     **** *
+ 152:polyvec.c     **** * Arguments:   - uint8_t *r:       pointer to output byte array
+ 153:polyvec.c     **** *              - const polyvec *a: pointer to input vector of polynomials
+ 154:polyvec.c     **** *                                  (of length KYBER_POLYVECBYTES)
+ 155:polyvec.c     **** **************************************************/
+ 156:polyvec.c     **** void polyvec_frombytes(polyvec *r, const uint8_t a[KYBER_POLYVECBYTES])
+ 157:polyvec.c     **** {
+ 399              		.loc 1 157 1 is_stmt 1 view -0
+ 400              		.cfi_startproc
+ 401              		@ args = 0, pretend = 0, frame = 0
+ 402              		@ frame_needed = 0, uses_anonymous_args = 0
+ 158:polyvec.c     ****   unsigned int i;
+ 403              		.loc 1 158 3 view .LVU135
+ 159:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 404              		.loc 1 159 3 view .LVU136
+ 405              		.loc 1 159 12 discriminator 1 view .LVU137
+ 160:polyvec.c     ****     poly_frombytes(&r->vec[i], a+i*KYBER_POLYBYTES);
+ 406              		.loc 1 160 5 view .LVU138
+ 157:polyvec.c     ****   unsigned int i;
+ 407              		.loc 1 157 1 is_stmt 0 view .LVU139
+ 408 0000 38B5     		push	{r3, r4, r5, lr}
+ 409              	.LCFI6:
+ 410              		.cfi_def_cfa_offset 16
+ 411              		.cfi_offset 3, -16
+ 412              		.cfi_offset 4, -12
+ 413              		.cfi_offset 5, -8
+ 414              		.cfi_offset 14, -4
+ 157:polyvec.c     ****   unsigned int i;
+ 415              		.loc 1 157 1 view .LVU140
+ 416 0002 0446     		mov	r4, r0
+ 417 0004 0D46     		mov	r5, r1
+ 418              		.loc 1 160 5 view .LVU141
+ 419 0006 FFF7FEFF 		bl	poly_frombytes
+ 420              	.LVL33:
+ 159:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 421              		.loc 1 159 22 is_stmt 1 discriminator 3 view .LVU142
+ 159:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 422              		.loc 1 159 12 discriminator 1 view .LVU143
+ 423              		.loc 1 160 5 view .LVU144
+ 424 000a 05F5C071 		add	r1, r5, #384
+ 425 000e 04F50070 		add	r0, r4, #512
+ 426 0012 FFF7FEFF 		bl	poly_frombytes
+ 427              	.LVL34:
+ 159:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 428              		.loc 1 159 22 discriminator 3 view .LVU145
+ 159:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 429              		.loc 1 159 12 discriminator 1 view .LVU146
+ 430              		.loc 1 160 5 view .LVU147
+ 431 0016 05F54071 		add	r1, r5, #768
+ 432 001a 04F58060 		add	r0, r4, #1024
+ 161:polyvec.c     **** }
+ 433              		.loc 1 161 1 is_stmt 0 view .LVU148
+ 434 001e BDE83840 		pop	{r3, r4, r5, lr}
+ 435              	.LCFI7:
+ 436              		.cfi_restore 14
+ 437              		.cfi_restore 5
+ 438              		.cfi_restore 4
+ 439              		.cfi_restore 3
+ 440              		.cfi_def_cfa_offset 0
+ 441              	.LVL35:
+ 160:polyvec.c     ****     poly_frombytes(&r->vec[i], a+i*KYBER_POLYBYTES);
+ 442              		.loc 1 160 5 view .LVU149
+ 443 0022 FFF7FEBF 		b	poly_frombytes
+ 444              	.LVL36:
+ 160:polyvec.c     ****     poly_frombytes(&r->vec[i], a+i*KYBER_POLYBYTES);
+ 445              		.loc 1 160 5 view .LVU150
+ 446              		.cfi_endproc
+ 447              	.LFE3:
+ 449              		.section	.text.polyvec_ntt,"ax",%progbits
+ 450              		.align	1
+ 451              		.global	polyvec_ntt
+ 452              		.syntax unified
+ 453              		.thumb
+ 454              		.thumb_func
+ 456              	polyvec_ntt:
+ 457              	.LVL37:
+ 458              	.LFB4:
+ 162:polyvec.c     **** 
+ 163:polyvec.c     **** /*************************************************
+ 164:polyvec.c     **** * Name:        polyvec_ntt
+ 165:polyvec.c     **** *
+ 166:polyvec.c     **** * Description: Apply forward NTT to all elements of a vector of polynomials
+ 167:polyvec.c     **** *
+ 168:polyvec.c     **** * Arguments:   - polyvec *r: pointer to in/output vector of polynomials
+ 169:polyvec.c     **** **************************************************/
+ 170:polyvec.c     **** void polyvec_ntt(polyvec *r)
+ 171:polyvec.c     **** {
+ 459              		.loc 1 171 1 is_stmt 1 view -0
+ 460              		.cfi_startproc
+ 461              		@ args = 0, pretend = 0, frame = 0
+ 462              		@ frame_needed = 0, uses_anonymous_args = 0
+ 172:polyvec.c     ****   unsigned int i;
+ 463              		.loc 1 172 3 view .LVU152
+ 173:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 464              		.loc 1 173 3 view .LVU153
+ 465              		.loc 1 173 12 discriminator 1 view .LVU154
+ 174:polyvec.c     ****     poly_ntt(&r->vec[i]);
+ 466              		.loc 1 174 5 view .LVU155
+ 171:polyvec.c     ****   unsigned int i;
+ 467              		.loc 1 171 1 is_stmt 0 view .LVU156
+ 468 0000 10B5     		push	{r4, lr}
+ 469              	.LCFI8:
+ 470              		.cfi_def_cfa_offset 8
+ 471              		.cfi_offset 4, -8
+ 472              		.cfi_offset 14, -4
+ 171:polyvec.c     ****   unsigned int i;
+ 473              		.loc 1 171 1 view .LVU157
+ 474 0002 0446     		mov	r4, r0
+ 475              		.loc 1 174 5 view .LVU158
+ 476 0004 FFF7FEFF 		bl	poly_ntt
+ 477              	.LVL38:
+ 173:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 478              		.loc 1 173 22 is_stmt 1 discriminator 3 view .LVU159
+ 173:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 479              		.loc 1 173 12 discriminator 1 view .LVU160
+ 480              		.loc 1 174 5 view .LVU161
+ 481 0008 04F50070 		add	r0, r4, #512
+ 482 000c FFF7FEFF 		bl	poly_ntt
+ 483              	.LVL39:
+ 173:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 484              		.loc 1 173 22 discriminator 3 view .LVU162
+ 173:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 485              		.loc 1 173 12 discriminator 1 view .LVU163
+ 486              		.loc 1 174 5 view .LVU164
+ 487 0010 04F58060 		add	r0, r4, #1024
+ 175:polyvec.c     **** }
+ 488              		.loc 1 175 1 is_stmt 0 view .LVU165
+ 489 0014 BDE81040 		pop	{r4, lr}
+ 490              	.LCFI9:
+ 491              		.cfi_restore 14
+ 492              		.cfi_restore 4
+ 493              		.cfi_def_cfa_offset 0
+ 494              	.LVL40:
+ 174:polyvec.c     ****     poly_ntt(&r->vec[i]);
+ 495              		.loc 1 174 5 view .LVU166
+ 496 0018 FFF7FEBF 		b	poly_ntt
+ 497              	.LVL41:
+ 174:polyvec.c     ****     poly_ntt(&r->vec[i]);
+ 498              		.loc 1 174 5 view .LVU167
+ 499              		.cfi_endproc
+ 500              	.LFE4:
+ 502              		.section	.text.polyvec_invntt_tomont,"ax",%progbits
+ 503              		.align	1
+ 504              		.global	polyvec_invntt_tomont
+ 505              		.syntax unified
+ 506              		.thumb
+ 507              		.thumb_func
+ 509              	polyvec_invntt_tomont:
+ 510              	.LVL42:
+ 511              	.LFB5:
+ 176:polyvec.c     **** 
+ 177:polyvec.c     **** /*************************************************
+ 178:polyvec.c     **** * Name:        polyvec_invntt_tomont
+ 179:polyvec.c     **** *
+ 180:polyvec.c     **** * Description: Apply inverse NTT to all elements of a vector of polynomials
+ 181:polyvec.c     **** *              and multiply by Montgomery factor 2^16
+ 182:polyvec.c     **** *
+ 183:polyvec.c     **** * Arguments:   - polyvec *r: pointer to in/output vector of polynomials
+ 184:polyvec.c     **** **************************************************/
+ 185:polyvec.c     **** void polyvec_invntt_tomont(polyvec *r)
+ 186:polyvec.c     **** {
+ 512              		.loc 1 186 1 is_stmt 1 view -0
+ 513              		.cfi_startproc
+ 514              		@ args = 0, pretend = 0, frame = 0
+ 515              		@ frame_needed = 0, uses_anonymous_args = 0
+ 187:polyvec.c     ****   unsigned int i;
+ 516              		.loc 1 187 3 view .LVU169
+ 188:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 517              		.loc 1 188 3 view .LVU170
+ 518              		.loc 1 188 12 discriminator 1 view .LVU171
+ 189:polyvec.c     ****     poly_invntt_tomont(&r->vec[i]);
+ 519              		.loc 1 189 5 view .LVU172
+ 186:polyvec.c     ****   unsigned int i;
+ 520              		.loc 1 186 1 is_stmt 0 view .LVU173
+ 521 0000 10B5     		push	{r4, lr}
+ 522              	.LCFI10:
+ 523              		.cfi_def_cfa_offset 8
+ 524              		.cfi_offset 4, -8
+ 525              		.cfi_offset 14, -4
+ 186:polyvec.c     ****   unsigned int i;
+ 526              		.loc 1 186 1 view .LVU174
+ 527 0002 0446     		mov	r4, r0
+ 528              		.loc 1 189 5 view .LVU175
+ 529 0004 FFF7FEFF 		bl	poly_invntt_tomont
+ 530              	.LVL43:
+ 188:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 531              		.loc 1 188 22 is_stmt 1 discriminator 3 view .LVU176
+ 188:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 532              		.loc 1 188 12 discriminator 1 view .LVU177
+ 533              		.loc 1 189 5 view .LVU178
+ 534 0008 04F50070 		add	r0, r4, #512
+ 535 000c FFF7FEFF 		bl	poly_invntt_tomont
+ 536              	.LVL44:
+ 188:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 537              		.loc 1 188 22 discriminator 3 view .LVU179
+ 188:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 538              		.loc 1 188 12 discriminator 1 view .LVU180
+ 539              		.loc 1 189 5 view .LVU181
+ 540 0010 04F58060 		add	r0, r4, #1024
+ 190:polyvec.c     **** }
+ 541              		.loc 1 190 1 is_stmt 0 view .LVU182
+ 542 0014 BDE81040 		pop	{r4, lr}
+ 543              	.LCFI11:
+ 544              		.cfi_restore 14
+ 545              		.cfi_restore 4
+ 546              		.cfi_def_cfa_offset 0
+ 547              	.LVL45:
+ 189:polyvec.c     ****     poly_invntt_tomont(&r->vec[i]);
+ 548              		.loc 1 189 5 view .LVU183
+ 549 0018 FFF7FEBF 		b	poly_invntt_tomont
+ 550              	.LVL46:
+ 189:polyvec.c     ****     poly_invntt_tomont(&r->vec[i]);
+ 551              		.loc 1 189 5 view .LVU184
+ 552              		.cfi_endproc
+ 553              	.LFE5:
+ 555              		.section	.text.polyvec_basemul_acc_montgomery,"ax",%progbits
+ 556              		.align	1
+ 557              		.global	polyvec_basemul_acc_montgomery
+ 558              		.syntax unified
+ 559              		.thumb
+ 560              		.thumb_func
+ 562              	polyvec_basemul_acc_montgomery:
+ 563              	.LVL47:
+ 564              	.LFB6:
+ 191:polyvec.c     **** 
+ 192:polyvec.c     **** /*************************************************
+ 193:polyvec.c     **** * Name:        polyvec_basemul_acc_montgomery
+ 194:polyvec.c     **** *
+ 195:polyvec.c     **** * Description: Multiply elements of a and b in NTT domain, accumulate into r,
+ 196:polyvec.c     **** *              and multiply by 2^-16.
+ 197:polyvec.c     **** *
+ 198:polyvec.c     **** * Arguments: - poly *r: pointer to output polynomial
+ 199:polyvec.c     **** *            - const polyvec *a: pointer to first input vector of polynomials
+ 200:polyvec.c     **** *            - const polyvec *b: pointer to second input vector of polynomials
+ 201:polyvec.c     **** **************************************************/
+ 202:polyvec.c     **** void polyvec_basemul_acc_montgomery(poly *r, const polyvec *a, const polyvec *b)
+ 203:polyvec.c     **** {
+ 565              		.loc 1 203 1 is_stmt 1 view -0
+ 566              		.cfi_startproc
+ 567              		@ args = 0, pretend = 0, frame = 512
+ 568              		@ frame_needed = 0, uses_anonymous_args = 0
+ 204:polyvec.c     ****   unsigned int i;
+ 569              		.loc 1 204 3 view .LVU186
+ 205:polyvec.c     ****   poly t;
+ 570              		.loc 1 205 3 view .LVU187
+ 206:polyvec.c     **** 
+ 207:polyvec.c     ****   poly_basemul_montgomery(r, &a->vec[0], &b->vec[0]);
+ 571              		.loc 1 207 3 view .LVU188
+ 203:polyvec.c     ****   unsigned int i;
+ 572              		.loc 1 203 1 is_stmt 0 view .LVU189
+ 573 0000 70B5     		push	{r4, r5, r6, lr}
+ 574              	.LCFI12:
+ 575              		.cfi_def_cfa_offset 16
+ 576              		.cfi_offset 4, -16
+ 577              		.cfi_offset 5, -12
+ 578              		.cfi_offset 6, -8
+ 579              		.cfi_offset 14, -4
+ 580 0002 0D46     		mov	r5, r1
+ 581 0004 ADF5007D 		sub	sp, sp, #512
+ 582              	.LCFI13:
+ 583              		.cfi_def_cfa_offset 528
+ 203:polyvec.c     ****   unsigned int i;
+ 584              		.loc 1 203 1 view .LVU190
+ 585 0008 1646     		mov	r6, r2
+ 586 000a 0446     		mov	r4, r0
+ 587              		.loc 1 207 3 view .LVU191
+ 588 000c FFF7FEFF 		bl	poly_basemul_montgomery
+ 589              	.LVL48:
+ 208:polyvec.c     ****   for(i=1;i<KYBER_K;i++) {
+ 590              		.loc 1 208 3 is_stmt 1 view .LVU192
+ 591              		.loc 1 208 12 discriminator 1 view .LVU193
+ 209:polyvec.c     ****     poly_basemul_montgomery(&t, &a->vec[i], &b->vec[i]);
+ 592              		.loc 1 209 5 view .LVU194
+ 593 0010 06F50072 		add	r2, r6, #512
+ 594 0014 05F50071 		add	r1, r5, #512
+ 595 0018 6846     		mov	r0, sp
+ 596 001a FFF7FEFF 		bl	poly_basemul_montgomery
+ 597              	.LVL49:
+ 210:polyvec.c     ****     poly_add(r, r, &t);
+ 598              		.loc 1 210 5 view .LVU195
+ 599 001e 6A46     		mov	r2, sp
+ 600 0020 2146     		mov	r1, r4
+ 601 0022 2046     		mov	r0, r4
+ 602 0024 FFF7FEFF 		bl	poly_add
+ 603              	.LVL50:
+ 208:polyvec.c     ****   for(i=1;i<KYBER_K;i++) {
+ 604              		.loc 1 208 22 discriminator 3 view .LVU196
+ 208:polyvec.c     ****   for(i=1;i<KYBER_K;i++) {
+ 605              		.loc 1 208 12 discriminator 1 view .LVU197
+ 209:polyvec.c     ****     poly_basemul_montgomery(&t, &a->vec[i], &b->vec[i]);
+ 606              		.loc 1 209 5 view .LVU198
+ 607 0028 06F58062 		add	r2, r6, #1024
+ 608 002c 05F58061 		add	r1, r5, #1024
+ 609 0030 6846     		mov	r0, sp
+ 610 0032 FFF7FEFF 		bl	poly_basemul_montgomery
+ 611              	.LVL51:
+ 612              		.loc 1 210 5 view .LVU199
+ 613 0036 6A46     		mov	r2, sp
+ 614 0038 2146     		mov	r1, r4
+ 615 003a 2046     		mov	r0, r4
+ 616 003c FFF7FEFF 		bl	poly_add
+ 617              	.LVL52:
+ 208:polyvec.c     ****   for(i=1;i<KYBER_K;i++) {
+ 618              		.loc 1 208 22 discriminator 3 view .LVU200
+ 208:polyvec.c     ****   for(i=1;i<KYBER_K;i++) {
+ 619              		.loc 1 208 12 discriminator 1 view .LVU201
+ 211:polyvec.c     ****   }
+ 212:polyvec.c     **** 
+ 213:polyvec.c     ****   poly_reduce(r);
+ 620              		.loc 1 213 3 view .LVU202
+ 621 0040 2046     		mov	r0, r4
+ 622 0042 FFF7FEFF 		bl	poly_reduce
+ 623              	.LVL53:
+ 214:polyvec.c     **** }
+ 624              		.loc 1 214 1 is_stmt 0 view .LVU203
+ 625 0046 0DF5007D 		add	sp, sp, #512
+ 626              	.LCFI14:
+ 627              		.cfi_def_cfa_offset 16
+ 628              		@ sp needed
+ 629 004a 70BD     		pop	{r4, r5, r6, pc}
+ 630              		.loc 1 214 1 view .LVU204
+ 631              		.cfi_endproc
+ 632              	.LFE6:
+ 634              		.section	.text.polyvec_reduce,"ax",%progbits
+ 635              		.align	1
+ 636              		.global	polyvec_reduce
+ 637              		.syntax unified
+ 638              		.thumb
+ 639              		.thumb_func
+ 641              	polyvec_reduce:
+ 642              	.LVL54:
+ 643              	.LFB7:
+ 215:polyvec.c     **** 
+ 216:polyvec.c     **** /*************************************************
+ 217:polyvec.c     **** * Name:        polyvec_reduce
+ 218:polyvec.c     **** *
+ 219:polyvec.c     **** * Description: Applies Barrett reduction to each coefficient
+ 220:polyvec.c     **** *              of each element of a vector of polynomials;
+ 221:polyvec.c     **** *              for details of the Barrett reduction see comments in reduce.c
+ 222:polyvec.c     **** *
+ 223:polyvec.c     **** * Arguments:   - polyvec *r: pointer to input/output polynomial
+ 224:polyvec.c     **** **************************************************/
+ 225:polyvec.c     **** void polyvec_reduce(polyvec *r)
+ 226:polyvec.c     **** {
+ 644              		.loc 1 226 1 is_stmt 1 view -0
+ 645              		.cfi_startproc
+ 646              		@ args = 0, pretend = 0, frame = 0
+ 647              		@ frame_needed = 0, uses_anonymous_args = 0
+ 227:polyvec.c     ****   unsigned int i;
+ 648              		.loc 1 227 3 view .LVU206
+ 228:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 649              		.loc 1 228 3 view .LVU207
+ 650              		.loc 1 228 12 discriminator 1 view .LVU208
+ 229:polyvec.c     ****     poly_reduce(&r->vec[i]);
+ 651              		.loc 1 229 5 view .LVU209
+ 226:polyvec.c     ****   unsigned int i;
+ 652              		.loc 1 226 1 is_stmt 0 view .LVU210
+ 653 0000 10B5     		push	{r4, lr}
+ 654              	.LCFI15:
+ 655              		.cfi_def_cfa_offset 8
+ 656              		.cfi_offset 4, -8
+ 657              		.cfi_offset 14, -4
+ 226:polyvec.c     ****   unsigned int i;
+ 658              		.loc 1 226 1 view .LVU211
+ 659 0002 0446     		mov	r4, r0
+ 660              		.loc 1 229 5 view .LVU212
+ 661 0004 FFF7FEFF 		bl	poly_reduce
+ 662              	.LVL55:
+ 228:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 663              		.loc 1 228 22 is_stmt 1 discriminator 3 view .LVU213
+ 228:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 664              		.loc 1 228 12 discriminator 1 view .LVU214
+ 665              		.loc 1 229 5 view .LVU215
+ 666 0008 04F50070 		add	r0, r4, #512
+ 667 000c FFF7FEFF 		bl	poly_reduce
+ 668              	.LVL56:
+ 228:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 669              		.loc 1 228 22 discriminator 3 view .LVU216
+ 228:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 670              		.loc 1 228 12 discriminator 1 view .LVU217
+ 671              		.loc 1 229 5 view .LVU218
+ 672 0010 04F58060 		add	r0, r4, #1024
+ 230:polyvec.c     **** }
+ 673              		.loc 1 230 1 is_stmt 0 view .LVU219
+ 674 0014 BDE81040 		pop	{r4, lr}
+ 675              	.LCFI16:
+ 676              		.cfi_restore 14
+ 677              		.cfi_restore 4
+ 678              		.cfi_def_cfa_offset 0
+ 679              	.LVL57:
+ 229:polyvec.c     ****     poly_reduce(&r->vec[i]);
+ 680              		.loc 1 229 5 view .LVU220
+ 681 0018 FFF7FEBF 		b	poly_reduce
+ 682              	.LVL58:
+ 229:polyvec.c     ****     poly_reduce(&r->vec[i]);
+ 683              		.loc 1 229 5 view .LVU221
+ 684              		.cfi_endproc
+ 685              	.LFE7:
+ 687              		.section	.text.polyvec_add,"ax",%progbits
+ 688              		.align	1
+ 689              		.global	polyvec_add
+ 690              		.syntax unified
+ 691              		.thumb
+ 692              		.thumb_func
+ 694              	polyvec_add:
+ 695              	.LVL59:
+ 696              	.LFB8:
+ 231:polyvec.c     **** 
+ 232:polyvec.c     **** /*************************************************
+ 233:polyvec.c     **** * Name:        polyvec_add
+ 234:polyvec.c     **** *
+ 235:polyvec.c     **** * Description: Add vectors of polynomials
+ 236:polyvec.c     **** *
+ 237:polyvec.c     **** * Arguments: - polyvec *r: pointer to output vector of polynomials
+ 238:polyvec.c     **** *            - const polyvec *a: pointer to first input vector of polynomials
+ 239:polyvec.c     **** *            - const polyvec *b: pointer to second input vector of polynomials
+ 240:polyvec.c     **** **************************************************/
+ 241:polyvec.c     **** void polyvec_add(polyvec *r, const polyvec *a, const polyvec *b)
+ 242:polyvec.c     **** {
+ 697              		.loc 1 242 1 is_stmt 1 view -0
+ 698              		.cfi_startproc
+ 699              		@ args = 0, pretend = 0, frame = 0
+ 700              		@ frame_needed = 0, uses_anonymous_args = 0
+ 243:polyvec.c     ****   unsigned int i;
+ 701              		.loc 1 243 3 view .LVU223
+ 244:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 702              		.loc 1 244 3 view .LVU224
+ 703              		.loc 1 244 12 discriminator 1 view .LVU225
+ 242:polyvec.c     ****   unsigned int i;
+ 704              		.loc 1 242 1 is_stmt 0 view .LVU226
+ 705 0000 F8B5     		push	{r3, r4, r5, r6, r7, lr}
+ 706              	.LCFI17:
+ 707              		.cfi_def_cfa_offset 24
+ 708              		.cfi_offset 3, -24
+ 709              		.cfi_offset 4, -20
+ 710              		.cfi_offset 5, -16
+ 711              		.cfi_offset 6, -12
+ 712              		.cfi_offset 7, -8
+ 713              		.cfi_offset 14, -4
+ 242:polyvec.c     ****   unsigned int i;
+ 714              		.loc 1 242 1 view .LVU227
+ 715 0002 0546     		mov	r5, r0
+ 716 0004 0E46     		mov	r6, r1
+ 717 0006 1746     		mov	r7, r2
+ 718 0008 0024     		movs	r4, #0
+ 719              	.LVL60:
+ 720              	.L24:
+ 245:polyvec.c     ****     poly_add(&r->vec[i], &a->vec[i], &b->vec[i]);
+ 721              		.loc 1 245 5 is_stmt 1 view .LVU228
+ 722 000a 3A19     		adds	r2, r7, r4
+ 723 000c 3119     		adds	r1, r6, r4
+ 724 000e 2819     		adds	r0, r5, r4
+ 244:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 725              		.loc 1 244 12 is_stmt 0 discriminator 1 view .LVU229
+ 726 0010 04F50074 		add	r4, r4, #512
+ 727              		.loc 1 245 5 view .LVU230
+ 728 0014 FFF7FEFF 		bl	poly_add
+ 729              	.LVL61:
+ 244:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 730              		.loc 1 244 22 is_stmt 1 discriminator 3 view .LVU231
+ 244:polyvec.c     ****   for(i=0;i<KYBER_K;i++)
+ 731              		.loc 1 244 12 discriminator 1 view .LVU232
+ 732 0018 B4F5C06F 		cmp	r4, #1536
+ 733 001c F5D1     		bne	.L24
+ 246:polyvec.c     **** }
+ 734              		.loc 1 246 1 is_stmt 0 view .LVU233
+ 735 001e F8BD     		pop	{r3, r4, r5, r6, r7, pc}
+ 736              		.loc 1 246 1 view .LVU234
+ 737              		.cfi_endproc
+ 738              	.LFE8:
+ 740              		.text
+ 741              	.Letext0:
+ 742              		.file 2 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 743              		.file 3 "poly.h"
+ 744              		.file 4 "polyvec.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 polyvec.c
+     /tmp/ccetr0Ti.s:19     .text.polyvec_compress:00000000 $t
+     /tmp/ccetr0Ti.s:25     .text.polyvec_compress:00000000 polyvec_compress
+     /tmp/ccetr0Ti.s:195    .text.polyvec_compress:000000b0 $d
+     /tmp/ccetr0Ti.s:200    .text.polyvec_decompress:00000000 $t
+     /tmp/ccetr0Ti.s:206    .text.polyvec_decompress:00000000 polyvec_decompress
+     /tmp/ccetr0Ti.s:330    .text.polyvec_tobytes:00000000 $t
+     /tmp/ccetr0Ti.s:336    .text.polyvec_tobytes:00000000 polyvec_tobytes
+     /tmp/ccetr0Ti.s:390    .text.polyvec_frombytes:00000000 $t
+     /tmp/ccetr0Ti.s:396    .text.polyvec_frombytes:00000000 polyvec_frombytes
+     /tmp/ccetr0Ti.s:450    .text.polyvec_ntt:00000000 $t
+     /tmp/ccetr0Ti.s:456    .text.polyvec_ntt:00000000 polyvec_ntt
+     /tmp/ccetr0Ti.s:503    .text.polyvec_invntt_tomont:00000000 $t
+     /tmp/ccetr0Ti.s:509    .text.polyvec_invntt_tomont:00000000 polyvec_invntt_tomont
+     /tmp/ccetr0Ti.s:556    .text.polyvec_basemul_acc_montgomery:00000000 $t
+     /tmp/ccetr0Ti.s:562    .text.polyvec_basemul_acc_montgomery:00000000 polyvec_basemul_acc_montgomery
+     /tmp/ccetr0Ti.s:635    .text.polyvec_reduce:00000000 $t
+     /tmp/ccetr0Ti.s:641    .text.polyvec_reduce:00000000 polyvec_reduce
+     /tmp/ccetr0Ti.s:688    .text.polyvec_add:00000000 $t
+     /tmp/ccetr0Ti.s:694    .text.polyvec_add:00000000 polyvec_add
+
+UNDEFINED SYMBOLS
+poly_tobytes
+poly_frombytes
+poly_ntt
+poly_invntt_tomont
+poly_basemul_montgomery
+poly_add
+poly_reduce

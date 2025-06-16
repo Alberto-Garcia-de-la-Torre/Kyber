@@ -1,0 +1,176 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"verify.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "verify.c"
+  18              		.section	.text.verify,"ax",%progbits
+  19              		.align	1
+  20              		.global	verify
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	verify:
+  26              	.LVL0:
+  27              	.LFB0:
+   1:verify.c      **** #include <stddef.h>
+   2:verify.c      **** #include <stdint.h>
+   3:verify.c      **** #include "verify.h"
+   4:verify.c      **** 
+   5:verify.c      **** /*************************************************
+   6:verify.c      **** * Name:        verify
+   7:verify.c      **** *
+   8:verify.c      **** * Description: Compare two arrays for equality in constant time.
+   9:verify.c      **** *
+  10:verify.c      **** * Arguments:   const uint8_t *a: pointer to first byte array
+  11:verify.c      **** *              const uint8_t *b: pointer to second byte array
+  12:verify.c      **** *              size_t len:       length of the byte arrays
+  13:verify.c      **** *
+  14:verify.c      **** * Returns 0 if the byte arrays are equal, 1 otherwise
+  15:verify.c      **** **************************************************/
+  16:verify.c      **** int verify(const uint8_t *a, const uint8_t *b, size_t len)
+  17:verify.c      **** {
+  28              		.loc 1 17 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		@ link register save eliminated.
+  18:verify.c      ****   size_t i;
+  33              		.loc 1 18 3 view .LVU1
+  19:verify.c      ****   uint8_t r = 0;
+  34              		.loc 1 19 3 view .LVU2
+  20:verify.c      **** 
+  21:verify.c      ****   for(i=0;i<len;i++)
+  35              		.loc 1 21 3 view .LVU3
+  36              		.loc 1 21 12 discriminator 1 view .LVU4
+  22:verify.c      ****     r |= a[i] ^ b[i];
+  23:verify.c      **** 
+  24:verify.c      ****   //return (-(uint64_t)r) >> 63;
+  25:verify.c      ****   return ((uint64_t)r) >> 63;
+  37              		.loc 1 25 3 view .LVU5
+  26:verify.c      **** }
+  38              		.loc 1 26 1 is_stmt 0 view .LVU6
+  39 0000 0020     		movs	r0, #0
+  40              	.LVL1:
+  41              		.loc 1 26 1 view .LVU7
+  42 0002 7047     		bx	lr
+  43              		.cfi_endproc
+  44              	.LFE0:
+  46              		.section	.text.cmov,"ax",%progbits
+  47              		.align	1
+  48              		.global	cmov
+  49              		.syntax unified
+  50              		.thumb
+  51              		.thumb_func
+  53              	cmov:
+  54              	.LVL2:
+  55              	.LFB1:
+  27:verify.c      **** 
+  28:verify.c      **** /*************************************************
+  29:verify.c      **** * Name:        cmov
+  30:verify.c      **** *
+  31:verify.c      **** * Description: Copy len bytes from x to r if b is 1;
+  32:verify.c      **** *              don't modify x if b is 0. Requires b to be in {0,1};
+  33:verify.c      **** *              assumes two's complement representation of negative integers.
+  34:verify.c      **** *              Runs in constant time.
+  35:verify.c      **** *
+  36:verify.c      **** * Arguments:   uint8_t *r:       pointer to output byte array
+  37:verify.c      **** *              const uint8_t *x: pointer to input byte array
+  38:verify.c      **** *              size_t len:       Amount of bytes to be copied
+  39:verify.c      **** *              uint8_t b:        Condition bit; has to be in {0,1}
+  40:verify.c      **** **************************************************/
+  41:verify.c      **** void cmov(uint8_t *r, const uint8_t *x, size_t len, uint8_t b)
+  42:verify.c      **** {
+  56              		.loc 1 42 1 is_stmt 1 view -0
+  57              		.cfi_startproc
+  58              		@ args = 0, pretend = 0, frame = 0
+  59              		@ frame_needed = 0, uses_anonymous_args = 0
+  43:verify.c      ****   size_t i;
+  60              		.loc 1 43 3 view .LVU9
+  44:verify.c      **** 
+  45:verify.c      **** //#if defined(__GNUC__) || defined(__clang__)
+  46:verify.c      **** //  // Prevent the compiler from
+  47:verify.c      **** //  //    1) inferring that b is 0/1-valued, and
+  48:verify.c      **** //  //    2) handling the two cases with a branch.
+  49:verify.c      **** //  // This is not necessary when verify.c and kem.c are separate translation
+  50:verify.c      **** //  // units, but we expect that downstream consumers will copy this code and/or
+  51:verify.c      **** //  // change how it is built.
+  52:verify.c      **** //  __asm__("" : "+r"(b) : /* no inputs */);
+  53:verify.c      **** //#endif
+  54:verify.c      **** 
+  55:verify.c      ****   b = -b;
+  61              		.loc 1 55 3 view .LVU10
+  42:verify.c      ****   size_t i;
+  62              		.loc 1 42 1 is_stmt 0 view .LVU11
+  63 0000 30B5     		push	{r4, r5, lr}
+  64              	.LCFI0:
+  65              		.cfi_def_cfa_offset 12
+  66              		.cfi_offset 4, -12
+  67              		.cfi_offset 5, -8
+  68              		.cfi_offset 14, -4
+  69              		.loc 1 55 5 view .LVU12
+  70 0002 5B42     		rsbs	r3, r3, #0
+  71              	.LVL3:
+  72              		.loc 1 55 5 view .LVU13
+  73 0004 DBB2     		uxtb	r3, r3
+  74              	.LVL4:
+  56:verify.c      ****   for(i=0;i<len;i++)
+  75              		.loc 1 56 3 is_stmt 1 view .LVU14
+  76              		.loc 1 56 3 is_stmt 0 view .LVU15
+  77 0006 0139     		subs	r1, r1, #1
+  78              	.LVL5:
+  79              		.loc 1 56 3 view .LVU16
+  80 0008 0244     		add	r2, r2, r0
+  81              	.LVL6:
+  82              	.L3:
+  83              		.loc 1 56 12 is_stmt 1 discriminator 1 view .LVU17
+  84 000a 9042     		cmp	r0, r2
+  85 000c 00D1     		bne	.L4
+  57:verify.c      ****     r[i] ^= b & (r[i] ^ x[i]);
+  58:verify.c      **** }
+  86              		.loc 1 58 1 is_stmt 0 view .LVU18
+  87 000e 30BD     		pop	{r4, r5, pc}
+  88              	.L4:
+  57:verify.c      ****     r[i] ^= b & (r[i] ^ x[i]);
+  89              		.loc 1 57 5 is_stmt 1 view .LVU19
+  57:verify.c      ****     r[i] ^= b & (r[i] ^ x[i]);
+  90              		.loc 1 57 6 is_stmt 0 view .LVU20
+  91 0010 0578     		ldrb	r5, [r0]	@ zero_extendqisi2
+  57:verify.c      ****     r[i] ^= b & (r[i] ^ x[i]);
+  92              		.loc 1 57 10 view .LVU21
+  93 0012 11F8014F 		ldrb	r4, [r1, #1]!	@ zero_extendqisi2
+  94 0016 6C40     		eors	r4, r4, r5
+  95 0018 1C40     		ands	r4, r4, r3
+  96 001a 6540     		eors	r5, r5, r4
+  97 001c 00F8015B 		strb	r5, [r0], #1
+  98              	.LVL7:
+  56:verify.c      ****   for(i=0;i<len;i++)
+  99              		.loc 1 56 18 is_stmt 1 discriminator 3 view .LVU22
+  56:verify.c      ****   for(i=0;i<len;i++)
+ 100              		.loc 1 56 18 is_stmt 0 discriminator 3 view .LVU23
+ 101 0020 F3E7     		b	.L3
+ 102              		.cfi_endproc
+ 103              	.LFE1:
+ 105              		.text
+ 106              	.Letext0:
+ 107              		.file 2 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+ 108              		.file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+DEFINED SYMBOLS
+                            *ABS*:00000000 verify.c
+     /tmp/ccZhukJX.s:19     .text.verify:00000000 $t
+     /tmp/ccZhukJX.s:25     .text.verify:00000000 verify
+     /tmp/ccZhukJX.s:47     .text.cmov:00000000 $t
+     /tmp/ccZhukJX.s:53     .text.cmov:00000000 cmov
+
+NO UNDEFINED SYMBOLS

@@ -1,0 +1,5 @@
+Para generation_key
+- scope.adc.samples = 20000 -> 5260000 samples
+- scope.adc.samples = 10000 -> 5240000 samples
+- scope.adc.samples = 5000  -> 5240000 samples GANADOR
+- scope.adc.samples = 2500  -> 5237500 samples

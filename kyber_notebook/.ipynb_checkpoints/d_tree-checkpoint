@@ -1,0 +1,124 @@
+crypto_kem_dec
+├──indcpa_dec
+│  ├──unpack_ciphertext
+│  │  ├──polyvec_decompress
+│  │  ├──poly_decompress
+│  ├──unpack_sk
+│  │  └──polyvec_frombytes
+│  │     └──for(3)
+│  │        └──poly_frombytes
+│  ├──polyvec_ntt
+│  │  └──poly_ntt
+│  │     ├──ntt
+│  │     │  └──fqmul
+│  │     │     └──montgomery_reduce
+│  │     └──poly_reduce
+│  │        └──barret_reduce
+│  ├──polyvec_basemul_acc_montgomery
+│  │  ├──poly_basemul_montgomery
+│  │  │  └──basemul
+│  │  │     └──fqmul
+│  │  │        └──montgomery_reduce
+│  │  ├──poly_add
+│  │  └──poly_reduce
+│  │     └──barret_reduce
+│  ├──poly_tomont
+│  │  └──montgomery_reduce
+│  ├──poly_invntt_tomont
+│  │  ├──invntt
+│  │  │  ├──for(128)
+│  │  │  │  ├──barret_reduce
+│  │  │  │  └──fqmul
+│  │  │  └──for(256)
+│  │  │     └──fqmul
+│  │  ├──poly_sub
+│  │  ├──for(256)
+│  │  │  └──barret_reduce
+│  │  └──poly_tomsg
+│  ├──for(32)
+│  │  └──buf
+│  └──hash_g
+├──indcpa_enc
+│  ├──unpack_pk
+│  │  ├──polyvec_frombytes
+│  │  │  └──poly_frombytes
+│  │  └──poly_frommsg
+│  ├──for(3)
+│  │  └──poly_getnoise_eta1
+│  │     └──poly_cbd_eta1
+│  │        └──cdb2
+│  │           └──load32_littleendian
+│  ├──for(3)
+│  │  └──poly_getnoise_eta2
+│  │     └──poly_cbd_eta2
+│  │        └──cdb2
+│  │           └──load32_littleendian
+│  ├──poly_getnoise_eta2
+│  │  └──poly_cbd_eta2
+│  │     └──cdb2
+│  │        └──load32_littleendian
+│  ├──polyvec_ntt
+│  │  └──poly_ntt
+│  │     ├──ntt
+│  │     │  └──fqmul
+│  │     │     └──montgomery_reduce
+│  │     └──poly_reduce
+│  │        └──barret_reduce
+│  ├──for(3)
+│  │  ├──polyvec_basemul_acc_montgomery
+│  │  │  ├──poly_basemul_montgomery
+│  │  │  │  └──basemul
+│  │  │  │     └──fqmul
+│  │  │  │        └──montgomery_reduce
+│  │  │  ├──poly_add
+│  │  │  └──poly_reduce
+│  │  │     └──barret_reduce
+│  ├──polyvec_basemul_acc_montgomery
+│  │  ├──poly_basemul_montgomery
+│  │  │  └──basemul
+│  │  │     └──fqmul
+│  │  │        └──montgomery_reduce
+│  │  ├──poly_add
+│  │  └──poly_reduce
+│  │     └──barret_reduce
+│  ├──polyvec_invntt_tomont
+│  │  ├──poly_invntt_tomont
+│  │  │  ├──invntt
+│  │  │  │  ├──for(128)
+│  │  │  │  │  ├──barret_reduce
+│  │  │  │  │  └──fqmul
+│  │  │  │  └──for(256)
+│  │  │  │     └──fqmul
+│  │  │  ├──poly_sub
+│  │  │  ├──for(256)
+│  │  │  │  └──barret_reduce
+│  │  │  └──poly_tomsg
+│  ├──poly_invntt_tomont
+│  │  ├──invntt
+│  │  │  ├──for(128)
+│  │  │  │  ├──barret_reduce
+│  │  │  │  └──fqmul
+│  │  │  └──for(256)
+│  │  │     └──fqmul
+│  │  ├──poly_sub
+│  │  ├──for(256)
+│  │  │  └──barret_reduce
+│  │  └──poly_tomsg
+│  ├──polyvec_add
+│  │  └──poly_add
+│  ├──poly_add
+│  ├──poly_add
+│  ├──polyvec_reduce
+│  │  └──poly_reduce
+│  │     └──for(3)
+│  │        └──barret_reduce
+│  ├──poly_reduce
+│  │  └──for(3)
+│  │     └──barret_reduce
+│  └──pack_ciphertext
+│     ├──polyvec_compress
+│     └──poly_compress
+├──verify
+├──hash_h
+├──cmov
+└──kdf

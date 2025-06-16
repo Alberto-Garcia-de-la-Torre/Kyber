@@ -1,0 +1,54 @@
+crypto_kem_keypair
+├──indcpa_keypair
+│  ├──randombytes
+│  ├──hash_g
+│  ├──gen_a
+│  ├──for(3)
+│  │  └──poly_getnoise_eta1
+│  │     └──poly_cbd_eta1
+│  │        └──cdb2
+│  │           └──load32_littleendian
+│  ├──for(3)
+│  │  └──poly_getnoise_eta1
+│  │     └──poly_cbd_eta1
+│  │        └──cdb2
+│  │           └──load32_littleendian
+│  ├──polyvec_ntt
+│  │  └──poly_ntt
+│  │     ├──ntt
+│  │     │  └──fqmul
+│  │     │     └──montgomery_reduce
+│  │     └──poly_reduce
+│  │        └──barret_reduce
+│  ├──polyvec_ntt
+│  │  └──poly_ntt
+│  │     ├──ntt
+│  │     │  └──fqmul
+│  │     │     └──montgomery_reduce
+│  │     └──poly_reduce
+│  │        └──barret_reduce
+│  ├──for(3)
+│  │  ├──polyvec_basemul_acc_montgomery
+│  │  │  ├──poly_basemul_montgomery
+│  │  │  │  └──basemul
+│  │  │  │     └──fqmul
+│  │  │  │        └──montgomery_reduce
+│  │  │  ├──poly_add
+│  │  │  └──poly_reduce
+│  │  │     └──barret_reduce
+│  │  └──poly_tomont
+│  │     └──montgomery_reduce
+│  ├──polyvec_add
+│  │  └──poly_add
+│  ├──pack_sk
+│  │  └──polyvec_tobytes
+│  │     └──poly_tobytes
+│  └──pack_pk
+│     └──polyvec_tobytes
+│        └──poly_tobytes
+├──for(1184)
+├──hash_h
+└──randombytes
+   ├──rand
+   ├──memcpy
+   └──memcpy

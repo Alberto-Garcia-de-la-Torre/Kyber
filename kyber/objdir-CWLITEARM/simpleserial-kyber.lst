@@ -1,0 +1,1043 @@
+   1              		.cpu cortex-m4
+   2              		.arch armv7e-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 4
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"simpleserial-kyber.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.file 1 "simpleserial-kyber.c"
+  18              		.section	.text.insert_variable,"ax",%progbits
+  19              		.align	1
+  20              		.global	insert_variable
+  21              		.syntax unified
+  22              		.thumb
+  23              		.thumb_func
+  25              	insert_variable:
+  26              	.LVL0:
+  27              	.LFB6:
+   1:simpleserial-kyber.c **** /*
+   2:simpleserial-kyber.c ****     This file is part of the ChipWhisperer Example Targets
+   3:simpleserial-kyber.c ****     Copyright (C) 2012-2017 NewAE Technology Inc.
+   4:simpleserial-kyber.c **** 
+   5:simpleserial-kyber.c ****     This program is free software: you can redistribute it and/or modify
+   6:simpleserial-kyber.c ****     it under the terms of the GNU General Public License as published by
+   7:simpleserial-kyber.c ****     the Free Software Foundation, either version 3 of the License, or
+   8:simpleserial-kyber.c ****     (at your option) any later version.
+   9:simpleserial-kyber.c **** 
+  10:simpleserial-kyber.c ****     This program is distributed in the hope that it will be useful,
+  11:simpleserial-kyber.c ****     but WITHOUT ANY WARRANTY; without even the implied warranty of
+  12:simpleserial-kyber.c ****     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+  13:simpleserial-kyber.c ****     GNU General Public License for more details.
+  14:simpleserial-kyber.c **** 
+  15:simpleserial-kyber.c ****     You should have received a copy of the GNU General Public License
+  16:simpleserial-kyber.c ****     along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  17:simpleserial-kyber.c **** */
+  18:simpleserial-kyber.c **** 
+  19:simpleserial-kyber.c **** #include <stdint.h>
+  20:simpleserial-kyber.c **** #include <stdlib.h>
+  21:simpleserial-kyber.c **** #include <string.h>
+  22:simpleserial-kyber.c **** 
+  23:simpleserial-kyber.c **** #include "simpleserial.h"
+  24:simpleserial-kyber.c **** #include "hal.h"
+  25:simpleserial-kyber.c **** 
+  26:simpleserial-kyber.c **** #include "kem.h"
+  27:simpleserial-kyber.c **** 
+  28:simpleserial-kyber.c **** #define NTESTS 10
+  29:simpleserial-kyber.c **** #define BUFFER_LEN 63
+  30:simpleserial-kyber.c **** #define VARIABLE_TYPE_LEN 1
+  31:simpleserial-kyber.c **** #define OFFSET_LEN 2
+  32:simpleserial-kyber.c **** #define TOTAL_DATA_LEN 1
+  33:simpleserial-kyber.c **** #define DATA_LEN BUFFER_LEN-VARIABLE_TYPE_LEN-OFFSET_LEN-TOTAL_DATA_LEN
+  34:simpleserial-kyber.c **** 
+  35:simpleserial-kyber.c **** uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+  36:simpleserial-kyber.c **** uint8_t sk[CRYPTO_SECRETKEYBYTES];
+  37:simpleserial-kyber.c **** uint8_t ct[CRYPTO_CIPHERTEXTBYTES];
+  38:simpleserial-kyber.c **** uint8_t ss[CRYPTO_BYTES];
+  39:simpleserial-kyber.c **** uint8_t pk_temp[CRYPTO_PUBLICKEYBYTES];
+  40:simpleserial-kyber.c **** uint8_t sk_temp[CRYPTO_SECRETKEYBYTES];
+  41:simpleserial-kyber.c **** uint8_t ct_temp[CRYPTO_CIPHERTEXTBYTES];
+  42:simpleserial-kyber.c **** uint8_t ss_temp[CRYPTO_BYTES];
+  43:simpleserial-kyber.c **** 
+  44:simpleserial-kyber.c **** // 0: pk, 1: sk, 2: ct, 3: ss, 4: pk_temp, 5: sk_temp, 6: ct_temp, 7:ss_temp
+  45:simpleserial-kyber.c **** uint8_t* variables[8] = {pk, sk, ct, ss, pk_temp, sk_temp, ct_temp, ss_temp};
+  46:simpleserial-kyber.c **** 
+  47:simpleserial-kyber.c **** uint8_t generate_key(uint8_t* pt, uint8_t len)
+  48:simpleserial-kyber.c **** {
+  49:simpleserial-kyber.c **** 	// Generar par de llaves
+  50:simpleserial-kyber.c ****     trigger_high();
+  51:simpleserial-kyber.c ****     crypto_kem_keypair(pk, sk);
+  52:simpleserial-kyber.c ****     trigger_low();
+  53:simpleserial-kyber.c **** 
+  54:simpleserial-kyber.c ****     simpleserial_put('r', BUFFER_LEN, pk);
+  55:simpleserial-kyber.c **** 	return 0x00;
+  56:simpleserial-kyber.c **** }
+  57:simpleserial-kyber.c **** 
+  58:simpleserial-kyber.c **** uint8_t encapsulate(uint8_t* pt, uint8_t len)
+  59:simpleserial-kyber.c **** {
+  60:simpleserial-kyber.c ****     // Encapsular mensaje
+  61:simpleserial-kyber.c **** 	trigger_high();
+  62:simpleserial-kyber.c **** 	crypto_kem_enc(ct, ss, pk);
+  63:simpleserial-kyber.c **** 	trigger_low();
+  64:simpleserial-kyber.c ****     
+  65:simpleserial-kyber.c ****     simpleserial_put('r', BUFFER_LEN, pk);
+  66:simpleserial-kyber.c **** 	return 0x00;
+  67:simpleserial-kyber.c **** }
+  68:simpleserial-kyber.c **** 
+  69:simpleserial-kyber.c **** uint8_t decapsulate(uint8_t* pt, uint8_t len)
+  70:simpleserial-kyber.c **** {
+  71:simpleserial-kyber.c ****     // Desencapsular mensaje
+  72:simpleserial-kyber.c **** 	trigger_high();
+  73:simpleserial-kyber.c **** 	crypto_kem_dec(ss, ct, sk);
+  74:simpleserial-kyber.c **** 	trigger_low();
+  75:simpleserial-kyber.c ****     
+  76:simpleserial-kyber.c ****     simpleserial_put('r', BUFFER_LEN, ss);
+  77:simpleserial-kyber.c **** 	return 0x00;
+  78:simpleserial-kyber.c **** }
+  79:simpleserial-kyber.c **** 
+  80:simpleserial-kyber.c **** uint8_t temp_decapsulate(uint8_t* pt, uint8_t len)
+  81:simpleserial-kyber.c **** {
+  82:simpleserial-kyber.c ****     // Desencapsular mensaje
+  83:simpleserial-kyber.c **** 	trigger_high();
+  84:simpleserial-kyber.c **** 	crypto_kem_dec(ss_temp, ct_temp, sk_temp);
+  85:simpleserial-kyber.c **** 	trigger_low();
+  86:simpleserial-kyber.c ****     
+  87:simpleserial-kyber.c ****     simpleserial_put('r', BUFFER_LEN, ss);
+  88:simpleserial-kyber.c **** 	return 0x00;
+  89:simpleserial-kyber.c **** }
+  90:simpleserial-kyber.c **** 
+  91:simpleserial-kyber.c **** uint8_t clock_signal(uint8_t* pt, uint8_t len)
+  92:simpleserial-kyber.c **** {
+  93:simpleserial-kyber.c ****     // Trigger vacío para comparar una señal vacía
+  94:simpleserial-kyber.c ****     trigger_high();
+  95:simpleserial-kyber.c ****     trigger_low();
+  96:simpleserial-kyber.c **** 
+  97:simpleserial-kyber.c ****     uint8_t puntero[70] = {
+  98:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+  99:simpleserial-kyber.c ****         0x27, 0x63, 0x27, 0x20, 0x63, 0x6f, 0x72, 0x72, 
+ 100:simpleserial-kyber.c ****         0x65, 0x63, 0x74, 0x61, 0x6d, 0x65, 0x6e, 0x74, 
+ 101:simpleserial-kyber.c ****         0x65, 0x20, 0x65, 0x6a, 0x65, 0x63, 0x75, 0x74, 
+ 102:simpleserial-kyber.c ****         0x61, 0x64, 0x6f,
+ 103:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+ 104:simpleserial-kyber.c ****         0x27, 0x63, 0x27, 0x20, 0x63, 0x6f, 0x72, 0x72, 
+ 105:simpleserial-kyber.c ****         0x65, 0x63, 0x74, 0x61, 0x6d, 0x65, 0x6e, 0x74, 
+ 106:simpleserial-kyber.c ****         0x65, 0x20, 0x65, 0x6a, 0x65, 0x63, 0x75, 0x74, 
+ 107:simpleserial-kyber.c ****         0x61, 0x64, 0x6f};
+ 108:simpleserial-kyber.c ****     
+ 109:simpleserial-kyber.c ****     simpleserial_put('r', BUFFER_LEN, puntero);
+ 110:simpleserial-kyber.c ****     return 0x00;
+ 111:simpleserial-kyber.c **** }
+ 112:simpleserial-kyber.c **** 
+ 113:simpleserial-kyber.c **** 
+ 114:simpleserial-kyber.c **** uint8_t prueba(uint8_t* pt, uint8_t len)
+ 115:simpleserial-kyber.c **** {
+ 116:simpleserial-kyber.c ****     // Trigger vacío para comparar una señal vacía
+ 117:simpleserial-kyber.c ****     trigger_high();
+ 118:simpleserial-kyber.c ****     trigger_low();
+ 119:simpleserial-kyber.c **** 
+ 120:simpleserial-kyber.c ****     uint8_t puntero_prueba[35] = {
+ 121:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+ 122:simpleserial-kyber.c ****         0x27, 0x70, 0x27, 0x20, 0x63, 0x6f, 0x72, 0x72, 
+ 123:simpleserial-kyber.c ****         0x65, 0x63, 0x74, 0x61, 0x6d, 0x65, 0x6e, 0x74, 
+ 124:simpleserial-kyber.c ****         0x65, 0x20, 0x65, 0x6a, 0x65, 0x63, 0x75, 0x74, 
+ 125:simpleserial-kyber.c ****         0x61, 0x64, 0x6f};
+ 126:simpleserial-kyber.c ****     
+ 127:simpleserial-kyber.c ****     simpleserial_put('r', 35, puntero_prueba);
+ 128:simpleserial-kyber.c ****     return 0x00;
+ 129:simpleserial-kyber.c **** }
+ 130:simpleserial-kyber.c **** 
+ 131:simpleserial-kyber.c **** uint8_t insert_variable(uint8_t* pt, uint8_t len)
+ 132:simpleserial-kyber.c **** {
+  28              		.loc 1 132 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+ 133:simpleserial-kyber.c ****     // Insertar valores en sk
+ 134:simpleserial-kyber.c ****     int variable_type = pt[0];
+  32              		.loc 1 134 5 view .LVU1
+ 135:simpleserial-kyber.c ****     int offset = pt[2] | pt[1] << 8;
+  33              		.loc 1 135 5 view .LVU2
+ 136:simpleserial-kyber.c ****     int total_data = pt[3];
+  34              		.loc 1 136 5 view .LVU3
+ 132:simpleserial-kyber.c ****     // Insertar valores en sk
+  35              		.loc 1 132 1 is_stmt 0 view .LVU4
+  36 0000 30B5     		push	{r4, r5, lr}
+  37              	.LCFI0:
+  38              		.cfi_def_cfa_offset 12
+  39              		.cfi_offset 4, -12
+  40              		.cfi_offset 5, -8
+  41              		.cfi_offset 14, -4
+  42 0002 0246     		mov	r2, r0
+  43 0004 0C49     		ldr	r1, .L4
+  44              	.LVL1:
+ 134:simpleserial-kyber.c ****     int offset = pt[2] | pt[1] << 8;
+  45              		.loc 1 134 9 view .LVU5
+  46 0006 12F8035B 		ldrb	r5, [r2], #3	@ zero_extendqisi2
+  47 000a B0F80130 		ldrh	r3, [r0, #1]	@ unaligned
+  48              		.loc 1 136 9 view .LVU6
+  49 000e C478     		ldrb	r4, [r0, #3]	@ zero_extendqisi2
+  50              	.LVL2:
+ 137:simpleserial-kyber.c ****     uint8_t* ptr = variables[variable_type];
+  51              		.loc 1 137 5 is_stmt 1 view .LVU7
+ 138:simpleserial-kyber.c ****     int i;
+  52              		.loc 1 138 5 view .LVU8
+ 139:simpleserial-kyber.c ****     for (i = 0; i < total_data; i++){
+  53              		.loc 1 139 5 view .LVU9
+  54              		.loc 1 139 5 is_stmt 0 view .LVU10
+  55 0010 51F82510 		ldr	r1, [r1, r5, lsl #2]
+  56              		.loc 1 139 19 discriminator 1 view .LVU11
+  57 0014 C0F1FF20 		rsb	r0, r0, #-16711936
+  58              	.LVL3:
+  59              		.loc 1 139 19 discriminator 1 view .LVU12
+  60 0018 5BBA     		rev16	r3, r3
+  61 001a 00F57F00 		add	r0, r0, #16711680
+  62 001e 11FA83F3 		uxtah	r3, r1, r3
+  63 0022 FD30     		adds	r0, r0, #253
+  64              	.LVL4:
+  65              	.L2:
+  66              		.loc 1 139 19 is_stmt 1 discriminator 1 view .LVU13
+  67 0024 8118     		adds	r1, r0, r2
+  68 0026 8C42     		cmp	r4, r1
+  69 0028 01DC     		bgt	.L3
+ 140:simpleserial-kyber.c ****         ptr[offset+i] = pt[VARIABLE_TYPE_LEN+OFFSET_LEN+TOTAL_DATA_LEN+i];
+ 141:simpleserial-kyber.c ****     }
+ 142:simpleserial-kyber.c ****     return 0x00;
+  70              		.loc 1 142 5 view .LVU14
+ 143:simpleserial-kyber.c **** }
+  71              		.loc 1 143 1 is_stmt 0 view .LVU15
+  72 002a 0020     		movs	r0, #0
+  73 002c 30BD     		pop	{r4, r5, pc}
+  74              	.LVL5:
+  75              	.L3:
+ 140:simpleserial-kyber.c ****         ptr[offset+i] = pt[VARIABLE_TYPE_LEN+OFFSET_LEN+TOTAL_DATA_LEN+i];
+  76              		.loc 1 140 9 is_stmt 1 view .LVU16
+ 140:simpleserial-kyber.c ****         ptr[offset+i] = pt[VARIABLE_TYPE_LEN+OFFSET_LEN+TOTAL_DATA_LEN+i];
+  77              		.loc 1 140 27 is_stmt 0 view .LVU17
+  78 002e 12F8011F 		ldrb	r1, [r2, #1]!	@ zero_extendqisi2
+ 140:simpleserial-kyber.c ****         ptr[offset+i] = pt[VARIABLE_TYPE_LEN+OFFSET_LEN+TOTAL_DATA_LEN+i];
+  79              		.loc 1 140 23 view .LVU18
+  80 0032 03F8011B 		strb	r1, [r3], #1
+ 139:simpleserial-kyber.c ****     for (i = 0; i < total_data; i++){
+  81              		.loc 1 139 34 is_stmt 1 discriminator 3 view .LVU19
+  82 0036 F5E7     		b	.L2
+  83              	.L5:
+  84              		.align	2
+  85              	.L4:
+  86 0038 00000000 		.word	.LANCHOR0
+  87              		.cfi_endproc
+  88              	.LFE6:
+  90              		.section	.text.generate_key,"ax",%progbits
+  91              		.align	1
+  92              		.global	generate_key
+  93              		.syntax unified
+  94              		.thumb
+  95              		.thumb_func
+  97              	generate_key:
+  98              	.LVL6:
+  99              	.LFB0:
+  48:simpleserial-kyber.c **** 	// Generar par de llaves
+ 100              		.loc 1 48 1 view -0
+ 101              		.cfi_startproc
+ 102              		@ args = 0, pretend = 0, frame = 0
+ 103              		@ frame_needed = 0, uses_anonymous_args = 0
+  50:simpleserial-kyber.c ****     crypto_kem_keypair(pk, sk);
+ 104              		.loc 1 50 5 view .LVU21
+  48:simpleserial-kyber.c **** 	// Generar par de llaves
+ 105              		.loc 1 48 1 is_stmt 0 view .LVU22
+ 106 0000 10B5     		push	{r4, lr}
+ 107              	.LCFI1:
+ 108              		.cfi_def_cfa_offset 8
+ 109              		.cfi_offset 4, -8
+ 110              		.cfi_offset 14, -4
+  50:simpleserial-kyber.c ****     crypto_kem_keypair(pk, sk);
+ 111              		.loc 1 50 5 view .LVU23
+ 112 0002 FFF7FEFF 		bl	trigger_high
+ 113              	.LVL7:
+  51:simpleserial-kyber.c ****     trigger_low();
+ 114              		.loc 1 51 5 is_stmt 1 view .LVU24
+ 115 0006 0749     		ldr	r1, .L7
+ 116 0008 01F51664 		add	r4, r1, #2400
+ 117 000c 2046     		mov	r0, r4
+ 118 000e FFF7FEFF 		bl	crypto_kem_keypair
+ 119              	.LVL8:
+  52:simpleserial-kyber.c **** 
+ 120              		.loc 1 52 5 view .LVU25
+ 121 0012 FFF7FEFF 		bl	trigger_low
+ 122              	.LVL9:
+  54:simpleserial-kyber.c **** 	return 0x00;
+ 123              		.loc 1 54 5 view .LVU26
+ 124 0016 2246     		mov	r2, r4
+ 125 0018 3F21     		movs	r1, #63
+ 126 001a 7220     		movs	r0, #114
+ 127 001c FFF7FEFF 		bl	simpleserial_put
+ 128              	.LVL10:
+  55:simpleserial-kyber.c **** }
+ 129              		.loc 1 55 2 view .LVU27
+  56:simpleserial-kyber.c **** 
+ 130              		.loc 1 56 1 is_stmt 0 view .LVU28
+ 131 0020 0020     		movs	r0, #0
+ 132 0022 10BD     		pop	{r4, pc}
+ 133              	.L8:
+ 134              		.align	2
+ 135              	.L7:
+ 136 0024 00000000 		.word	.LANCHOR1
+ 137              		.cfi_endproc
+ 138              	.LFE0:
+ 140              		.section	.rodata.str1.1,"aMS",%progbits,1
+ 141              	.LC0:
+ 142 0000 436F6D61 		.ascii	"Comando 'c' correctamente ejecutadoComando 'c' corr"
+ 142      6E646F20 
+ 142      27632720 
+ 142      636F7272 
+ 142      65637461 
+ 143 0033 65637461 		.ascii	"ectamente ejecutado\000"
+ 143      6D656E74 
+ 143      6520656A 
+ 143      65637574 
+ 143      61646F00 
+ 144              		.section	.text.clock_signal,"ax",%progbits
+ 145              		.align	1
+ 146              		.global	clock_signal
+ 147              		.syntax unified
+ 148              		.thumb
+ 149              		.thumb_func
+ 151              	clock_signal:
+ 152              	.LVL11:
+ 153              	.LFB4:
+  92:simpleserial-kyber.c ****     // Trigger vacío para comparar una señal vacía
+ 154              		.loc 1 92 1 is_stmt 1 view -0
+ 155              		.cfi_startproc
+ 156              		@ args = 0, pretend = 0, frame = 72
+ 157              		@ frame_needed = 0, uses_anonymous_args = 0
+  94:simpleserial-kyber.c ****     trigger_low();
+ 158              		.loc 1 94 5 view .LVU30
+  92:simpleserial-kyber.c ****     // Trigger vacío para comparar una señal vacía
+ 159              		.loc 1 92 1 is_stmt 0 view .LVU31
+ 160 0000 00B5     		push	{lr}
+ 161              	.LCFI2:
+ 162              		.cfi_def_cfa_offset 4
+ 163              		.cfi_offset 14, -4
+ 164 0002 93B0     		sub	sp, sp, #76
+ 165              	.LCFI3:
+ 166              		.cfi_def_cfa_offset 80
+  94:simpleserial-kyber.c ****     trigger_low();
+ 167              		.loc 1 94 5 view .LVU32
+ 168 0004 FFF7FEFF 		bl	trigger_high
+ 169              	.LVL12:
+  95:simpleserial-kyber.c **** 
+ 170              		.loc 1 95 5 is_stmt 1 view .LVU33
+ 171 0008 FFF7FEFF 		bl	trigger_low
+ 172              	.LVL13:
+  97:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+ 173              		.loc 1 97 5 view .LVU34
+  97:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+ 174              		.loc 1 97 13 is_stmt 0 view .LVU35
+ 175 000c 0649     		ldr	r1, .L10
+ 176 000e 4622     		movs	r2, #70
+ 177 0010 6846     		mov	r0, sp
+ 178 0012 FFF7FEFF 		bl	memcpy
+ 179              	.LVL14:
+ 109:simpleserial-kyber.c ****     return 0x00;
+ 180              		.loc 1 109 5 is_stmt 1 view .LVU36
+ 181 0016 6A46     		mov	r2, sp
+ 182 0018 3F21     		movs	r1, #63
+ 183 001a 7220     		movs	r0, #114
+ 184 001c FFF7FEFF 		bl	simpleserial_put
+ 185              	.LVL15:
+ 110:simpleserial-kyber.c **** }
+ 186              		.loc 1 110 5 view .LVU37
+ 111:simpleserial-kyber.c **** 
+ 187              		.loc 1 111 1 is_stmt 0 view .LVU38
+ 188 0020 0020     		movs	r0, #0
+ 189 0022 13B0     		add	sp, sp, #76
+ 190              	.LCFI4:
+ 191              		.cfi_def_cfa_offset 4
+ 192              		@ sp needed
+ 193 0024 5DF804FB 		ldr	pc, [sp], #4
+ 194              	.L11:
+ 195              		.align	2
+ 196              	.L10:
+ 197 0028 00000000 		.word	.LC0
+ 198              		.cfi_endproc
+ 199              	.LFE4:
+ 201              		.section	.rodata.str1.1
+ 202              	.LC1:
+ 203 0047 436F6D61 		.ascii	"Comando 'p' correctamente ejecutado\000"
+ 203      6E646F20 
+ 203      27702720 
+ 203      636F7272 
+ 203      65637461 
+ 204              		.section	.text.prueba,"ax",%progbits
+ 205              		.align	1
+ 206              		.global	prueba
+ 207              		.syntax unified
+ 208              		.thumb
+ 209              		.thumb_func
+ 211              	prueba:
+ 212              	.LVL16:
+ 213              	.LFB5:
+ 115:simpleserial-kyber.c ****     // Trigger vacío para comparar una señal vacía
+ 214              		.loc 1 115 1 is_stmt 1 view -0
+ 215              		.cfi_startproc
+ 216              		@ args = 0, pretend = 0, frame = 40
+ 217              		@ frame_needed = 0, uses_anonymous_args = 0
+ 117:simpleserial-kyber.c ****     trigger_low();
+ 218              		.loc 1 117 5 view .LVU40
+ 115:simpleserial-kyber.c ****     // Trigger vacío para comparar una señal vacía
+ 219              		.loc 1 115 1 is_stmt 0 view .LVU41
+ 220 0000 70B5     		push	{r4, r5, r6, lr}
+ 221              	.LCFI5:
+ 222              		.cfi_def_cfa_offset 16
+ 223              		.cfi_offset 4, -16
+ 224              		.cfi_offset 5, -12
+ 225              		.cfi_offset 6, -8
+ 226              		.cfi_offset 14, -4
+ 227 0002 8AB0     		sub	sp, sp, #40
+ 228              	.LCFI6:
+ 229              		.cfi_def_cfa_offset 56
+ 117:simpleserial-kyber.c ****     trigger_low();
+ 230              		.loc 1 117 5 view .LVU42
+ 231 0004 FFF7FEFF 		bl	trigger_high
+ 232              	.LVL17:
+ 118:simpleserial-kyber.c **** 
+ 233              		.loc 1 118 5 is_stmt 1 view .LVU43
+ 234 0008 FFF7FEFF 		bl	trigger_low
+ 235              	.LVL18:
+ 120:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+ 236              		.loc 1 120 5 view .LVU44
+ 120:simpleserial-kyber.c ****         0x43, 0x6f, 0x6d, 0x61, 0x6e, 0x64, 0x6f, 0x20, 
+ 237              		.loc 1 120 13 is_stmt 0 view .LVU45
+ 238 000c 0B4B     		ldr	r3, .L15
+ 239 000e 01AC     		add	r4, sp, #4
+ 240 0010 03F12006 		add	r6, r3, #32
+ 241 0014 2246     		mov	r2, r4
+ 242              	.L13:
+ 243 0016 1868     		ldr	r0, [r3]	@ unaligned
+ 244 0018 5968     		ldr	r1, [r3, #4]	@ unaligned
+ 245 001a 2546     		mov	r5, r4
+ 246 001c 03C5     		stmia	r5!, {r0, r1}
+ 247 001e 0833     		adds	r3, r3, #8
+ 248 0020 B342     		cmp	r3, r6
+ 249 0022 2C46     		mov	r4, r5
+ 250 0024 F7D1     		bne	.L13
+ 251 0026 1988     		ldrh	r1, [r3]	@ unaligned
+ 252 0028 9B78     		ldrb	r3, [r3, #2]	@ zero_extendqisi2
+ 253 002a 2980     		strh	r1, [r5]	@ unaligned
+ 254 002c AB70     		strb	r3, [r5, #2]
+ 127:simpleserial-kyber.c ****     return 0x00;
+ 255              		.loc 1 127 5 is_stmt 1 view .LVU46
+ 256 002e 2321     		movs	r1, #35
+ 257 0030 7220     		movs	r0, #114
+ 258 0032 FFF7FEFF 		bl	simpleserial_put
+ 259              	.LVL19:
+ 128:simpleserial-kyber.c **** }
+ 260              		.loc 1 128 5 view .LVU47
+ 129:simpleserial-kyber.c **** 
+ 261              		.loc 1 129 1 is_stmt 0 view .LVU48
+ 262 0036 0020     		movs	r0, #0
+ 263 0038 0AB0     		add	sp, sp, #40
+ 264              	.LCFI7:
+ 265              		.cfi_def_cfa_offset 16
+ 266              		@ sp needed
+ 267 003a 70BD     		pop	{r4, r5, r6, pc}
+ 268              	.L16:
+ 269              		.align	2
+ 270              	.L15:
+ 271 003c 47000000 		.word	.LC1
+ 272              		.cfi_endproc
+ 273              	.LFE5:
+ 275              		.section	.text.encapsulate,"ax",%progbits
+ 276              		.align	1
+ 277              		.global	encapsulate
+ 278              		.syntax unified
+ 279              		.thumb
+ 280              		.thumb_func
+ 282              	encapsulate:
+ 283              	.LVL20:
+ 284              	.LFB1:
+  59:simpleserial-kyber.c ****     // Encapsular mensaje
+ 285              		.loc 1 59 1 is_stmt 1 view -0
+ 286              		.cfi_startproc
+ 287              		@ args = 0, pretend = 0, frame = 0
+ 288              		@ frame_needed = 0, uses_anonymous_args = 0
+  61:simpleserial-kyber.c **** 	crypto_kem_enc(ct, ss, pk);
+ 289              		.loc 1 61 2 view .LVU50
+  59:simpleserial-kyber.c ****     // Encapsular mensaje
+ 290              		.loc 1 59 1 is_stmt 0 view .LVU51
+ 291 0000 10B5     		push	{r4, lr}
+ 292              	.LCFI8:
+ 293              		.cfi_def_cfa_offset 8
+ 294              		.cfi_offset 4, -8
+ 295              		.cfi_offset 14, -4
+  61:simpleserial-kyber.c **** 	crypto_kem_enc(ct, ss, pk);
+ 296              		.loc 1 61 2 view .LVU52
+ 297 0002 FFF7FEFF 		bl	trigger_high
+ 298              	.LVL21:
+  62:simpleserial-kyber.c **** 	trigger_low();
+ 299              		.loc 1 62 2 is_stmt 1 view .LVU53
+ 300 0006 0948     		ldr	r0, .L18
+ 301 0008 00F51664 		add	r4, r0, #2400
+ 302 000c 2246     		mov	r2, r4
+ 303 000e 00F56061 		add	r1, r0, #3584
+ 304 0012 00F56260 		add	r0, r0, #3616
+ 305 0016 FFF7FEFF 		bl	crypto_kem_enc
+ 306              	.LVL22:
+  63:simpleserial-kyber.c ****     
+ 307              		.loc 1 63 2 view .LVU54
+ 308 001a FFF7FEFF 		bl	trigger_low
+ 309              	.LVL23:
+  65:simpleserial-kyber.c **** 	return 0x00;
+ 310              		.loc 1 65 5 view .LVU55
+ 311 001e 2246     		mov	r2, r4
+ 312 0020 3F21     		movs	r1, #63
+ 313 0022 7220     		movs	r0, #114
+ 314 0024 FFF7FEFF 		bl	simpleserial_put
+ 315              	.LVL24:
+  66:simpleserial-kyber.c **** }
+ 316              		.loc 1 66 2 view .LVU56
+  67:simpleserial-kyber.c **** 
+ 317              		.loc 1 67 1 is_stmt 0 view .LVU57
+ 318 0028 0020     		movs	r0, #0
+ 319 002a 10BD     		pop	{r4, pc}
+ 320              	.L19:
+ 321              		.align	2
+ 322              	.L18:
+ 323 002c 00000000 		.word	.LANCHOR1
+ 324              		.cfi_endproc
+ 325              	.LFE1:
+ 327              		.section	.text.decapsulate,"ax",%progbits
+ 328              		.align	1
+ 329              		.global	decapsulate
+ 330              		.syntax unified
+ 331              		.thumb
+ 332              		.thumb_func
+ 334              	decapsulate:
+ 335              	.LVL25:
+ 336              	.LFB2:
+  70:simpleserial-kyber.c ****     // Desencapsular mensaje
+ 337              		.loc 1 70 1 is_stmt 1 view -0
+ 338              		.cfi_startproc
+ 339              		@ args = 0, pretend = 0, frame = 0
+ 340              		@ frame_needed = 0, uses_anonymous_args = 0
+  72:simpleserial-kyber.c **** 	crypto_kem_dec(ss, ct, sk);
+ 341              		.loc 1 72 2 view .LVU59
+  70:simpleserial-kyber.c ****     // Desencapsular mensaje
+ 342              		.loc 1 70 1 is_stmt 0 view .LVU60
+ 343 0000 10B5     		push	{r4, lr}
+ 344              	.LCFI9:
+ 345              		.cfi_def_cfa_offset 8
+ 346              		.cfi_offset 4, -8
+ 347              		.cfi_offset 14, -4
+  72:simpleserial-kyber.c **** 	crypto_kem_dec(ss, ct, sk);
+ 348              		.loc 1 72 2 view .LVU61
+ 349 0002 FFF7FEFF 		bl	trigger_high
+ 350              	.LVL26:
+  73:simpleserial-kyber.c **** 	trigger_low();
+ 351              		.loc 1 73 2 is_stmt 1 view .LVU62
+ 352 0006 084A     		ldr	r2, .L21
+ 353 0008 02F56064 		add	r4, r2, #3584
+ 354 000c 02F56261 		add	r1, r2, #3616
+ 355 0010 2046     		mov	r0, r4
+ 356 0012 FFF7FEFF 		bl	crypto_kem_dec
+ 357              	.LVL27:
+  74:simpleserial-kyber.c ****     
+ 358              		.loc 1 74 2 view .LVU63
+ 359 0016 FFF7FEFF 		bl	trigger_low
+ 360              	.LVL28:
+  76:simpleserial-kyber.c **** 	return 0x00;
+ 361              		.loc 1 76 5 view .LVU64
+ 362 001a 2246     		mov	r2, r4
+ 363 001c 3F21     		movs	r1, #63
+ 364 001e 7220     		movs	r0, #114
+ 365 0020 FFF7FEFF 		bl	simpleserial_put
+ 366              	.LVL29:
+  77:simpleserial-kyber.c **** }
+ 367              		.loc 1 77 2 view .LVU65
+  78:simpleserial-kyber.c **** 
+ 368              		.loc 1 78 1 is_stmt 0 view .LVU66
+ 369 0024 0020     		movs	r0, #0
+ 370 0026 10BD     		pop	{r4, pc}
+ 371              	.L22:
+ 372              		.align	2
+ 373              	.L21:
+ 374 0028 00000000 		.word	.LANCHOR1
+ 375              		.cfi_endproc
+ 376              	.LFE2:
+ 378              		.section	.text.temp_decapsulate,"ax",%progbits
+ 379              		.align	1
+ 380              		.global	temp_decapsulate
+ 381              		.syntax unified
+ 382              		.thumb
+ 383              		.thumb_func
+ 385              	temp_decapsulate:
+ 386              	.LVL30:
+ 387              	.LFB3:
+  81:simpleserial-kyber.c ****     // Desencapsular mensaje
+ 388              		.loc 1 81 1 is_stmt 1 view -0
+ 389              		.cfi_startproc
+ 390              		@ args = 0, pretend = 0, frame = 0
+ 391              		@ frame_needed = 0, uses_anonymous_args = 0
+  83:simpleserial-kyber.c **** 	crypto_kem_dec(ss_temp, ct_temp, sk_temp);
+ 392              		.loc 1 83 2 view .LVU68
+  81:simpleserial-kyber.c ****     // Desencapsular mensaje
+ 393              		.loc 1 81 1 is_stmt 0 view .LVU69
+ 394 0000 08B5     		push	{r3, lr}
+ 395              	.LCFI10:
+ 396              		.cfi_def_cfa_offset 8
+ 397              		.cfi_offset 3, -8
+ 398              		.cfi_offset 14, -4
+  83:simpleserial-kyber.c **** 	crypto_kem_dec(ss_temp, ct_temp, sk_temp);
+ 399              		.loc 1 83 2 view .LVU70
+ 400 0002 FFF7FEFF 		bl	trigger_high
+ 401              	.LVL31:
+  84:simpleserial-kyber.c **** 	trigger_low();
+ 402              		.loc 1 84 2 is_stmt 1 view .LVU71
+ 403 0006 0948     		ldr	r0, .L24
+ 404 0008 00F5B472 		add	r2, r0, #360
+ 405 000c 00F6C821 		addw	r1, r0, #2760
+ 406 0010 00F60870 		addw	r0, r0, #3848
+ 407 0014 FFF7FEFF 		bl	crypto_kem_dec
+ 408              	.LVL32:
+  85:simpleserial-kyber.c ****     
+ 409              		.loc 1 85 2 view .LVU72
+ 410 0018 FFF7FEFF 		bl	trigger_low
+ 411              	.LVL33:
+  87:simpleserial-kyber.c **** 	return 0x00;
+ 412              		.loc 1 87 5 view .LVU73
+ 413 001c 044A     		ldr	r2, .L24+4
+ 414 001e 3F21     		movs	r1, #63
+ 415 0020 7220     		movs	r0, #114
+ 416 0022 FFF7FEFF 		bl	simpleserial_put
+ 417              	.LVL34:
+  88:simpleserial-kyber.c **** }
+ 418              		.loc 1 88 2 view .LVU74
+  89:simpleserial-kyber.c **** 
+ 419              		.loc 1 89 1 is_stmt 0 view .LVU75
+ 420 0026 0020     		movs	r0, #0
+ 421 0028 08BD     		pop	{r3, pc}
+ 422              	.L25:
+ 423 002a 00BF     		.align	2
+ 424              	.L24:
+ 425 002c F8100000 		.word	.LANCHOR2
+ 426 0030 000E0000 		.word	.LANCHOR1+3584
+ 427              		.cfi_endproc
+ 428              	.LFE3:
+ 430              		.section	.text.return_variable,"ax",%progbits
+ 431              		.align	1
+ 432              		.global	return_variable
+ 433              		.syntax unified
+ 434              		.thumb
+ 435              		.thumb_func
+ 437              	return_variable:
+ 438              	.LVL35:
+ 439              	.LFB7:
+ 144:simpleserial-kyber.c **** 
+ 145:simpleserial-kyber.c **** uint8_t return_variable(uint8_t* pt, uint8_t len)
+ 146:simpleserial-kyber.c **** {
+ 440              		.loc 1 146 1 is_stmt 1 view -0
+ 441              		.cfi_startproc
+ 442              		@ args = 0, pretend = 0, frame = 64
+ 443              		@ frame_needed = 0, uses_anonymous_args = 0
+ 147:simpleserial-kyber.c ****     // Devolver puntero desde offset especificado
+ 148:simpleserial-kyber.c ****     int variable_type = pt[0];
+ 444              		.loc 1 148 5 view .LVU77
+ 149:simpleserial-kyber.c ****     int offset = pt[2] | pt[1] << 8;
+ 445              		.loc 1 149 5 view .LVU78
+ 146:simpleserial-kyber.c ****     // Devolver puntero desde offset especificado
+ 446              		.loc 1 146 1 is_stmt 0 view .LVU79
+ 447 0000 70B5     		push	{r4, r5, r6, lr}
+ 448              	.LCFI11:
+ 449              		.cfi_def_cfa_offset 16
+ 450              		.cfi_offset 4, -16
+ 451              		.cfi_offset 5, -12
+ 452              		.cfi_offset 6, -8
+ 453              		.cfi_offset 14, -4
+ 150:simpleserial-kyber.c ****     int total_data = pt[3];
+ 151:simpleserial-kyber.c ****     uint8_t* ptr = variables[variable_type];
+ 454              		.loc 1 151 14 view .LVU80
+ 455 0002 114B     		ldr	r3, .L29
+ 148:simpleserial-kyber.c ****     int offset = pt[2] | pt[1] << 8;
+ 456              		.loc 1 148 9 view .LVU81
+ 457 0004 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+ 458 0006 B0F80140 		ldrh	r4, [r0, #1]	@ unaligned
+ 459              		.loc 1 151 14 view .LVU82
+ 460 000a 53F82250 		ldr	r5, [r3, r2, lsl #2]
+ 150:simpleserial-kyber.c ****     int total_data = pt[3];
+ 461              		.loc 1 150 9 view .LVU83
+ 462 000e C678     		ldrb	r6, [r0, #3]	@ zero_extendqisi2
+ 146:simpleserial-kyber.c ****     // Devolver puntero desde offset especificado
+ 463              		.loc 1 146 1 view .LVU84
+ 464 0010 90B0     		sub	sp, sp, #64
+ 465              	.LCFI12:
+ 466              		.cfi_def_cfa_offset 80
+ 467 0012 64BA     		rev16	r4, r4
+ 152:simpleserial-kyber.c ****     uint8_t new_ptr[BUFFER_LEN];
+ 153:simpleserial-kyber.c ****     memset(new_ptr, 0x00, BUFFER_LEN);
+ 468              		.loc 1 153 5 view .LVU85
+ 469 0014 3F22     		movs	r2, #63
+ 470 0016 0021     		movs	r1, #0
+ 471              	.LVL36:
+ 472              		.loc 1 153 5 view .LVU86
+ 473 0018 A4B2     		uxth	r4, r4
+ 474              	.LVL37:
+ 150:simpleserial-kyber.c ****     uint8_t* ptr = variables[variable_type];
+ 475              		.loc 1 150 5 is_stmt 1 view .LVU87
+ 151:simpleserial-kyber.c ****     uint8_t new_ptr[BUFFER_LEN];
+ 476              		.loc 1 151 5 view .LVU88
+ 152:simpleserial-kyber.c ****     uint8_t new_ptr[BUFFER_LEN];
+ 477              		.loc 1 152 5 view .LVU89
+ 478              		.loc 1 153 5 view .LVU90
+ 479 001a 6846     		mov	r0, sp
+ 480              	.LVL38:
+ 481              		.loc 1 153 5 is_stmt 0 view .LVU91
+ 482 001c FFF7FEFF 		bl	memset
+ 483              	.LVL39:
+ 154:simpleserial-kyber.c ****     int i;
+ 484              		.loc 1 154 5 is_stmt 1 view .LVU92
+ 155:simpleserial-kyber.c ****     for (i = 0; i < total_data; i++){
+ 485              		.loc 1 155 5 view .LVU93
+ 486              		.loc 1 155 5 is_stmt 0 view .LVU94
+ 487 0020 2B19     		adds	r3, r5, r4
+ 488 0022 6946     		mov	r1, sp
+ 489              		.loc 1 155 12 view .LVU95
+ 490 0024 0022     		movs	r2, #0
+ 491              	.LVL40:
+ 492              	.L27:
+ 493              		.loc 1 155 19 is_stmt 1 discriminator 1 view .LVU96
+ 494 0026 B242     		cmp	r2, r6
+ 495 0028 07DB     		blt	.L28
+ 156:simpleserial-kyber.c ****         new_ptr[i] = ptr[offset+i];
+ 157:simpleserial-kyber.c ****     }
+ 158:simpleserial-kyber.c ****     simpleserial_put('r', BUFFER_LEN, new_ptr);
+ 496              		.loc 1 158 5 view .LVU97
+ 497 002a 6A46     		mov	r2, sp
+ 498              	.LVL41:
+ 499              		.loc 1 158 5 is_stmt 0 view .LVU98
+ 500 002c 3F21     		movs	r1, #63
+ 501 002e 7220     		movs	r0, #114
+ 502 0030 FFF7FEFF 		bl	simpleserial_put
+ 503              	.LVL42:
+ 159:simpleserial-kyber.c **** 
+ 160:simpleserial-kyber.c ****     return 0x00;
+ 504              		.loc 1 160 5 is_stmt 1 view .LVU99
+ 161:simpleserial-kyber.c **** }
+ 505              		.loc 1 161 1 is_stmt 0 view .LVU100
+ 506 0034 0020     		movs	r0, #0
+ 507 0036 10B0     		add	sp, sp, #64
+ 508              	.LCFI13:
+ 509              		.cfi_remember_state
+ 510              		.cfi_def_cfa_offset 16
+ 511              		@ sp needed
+ 512 0038 70BD     		pop	{r4, r5, r6, pc}
+ 513              	.LVL43:
+ 514              	.L28:
+ 515              	.LCFI14:
+ 516              		.cfi_restore_state
+ 156:simpleserial-kyber.c ****         new_ptr[i] = ptr[offset+i];
+ 517              		.loc 1 156 9 is_stmt 1 view .LVU101
+ 156:simpleserial-kyber.c ****         new_ptr[i] = ptr[offset+i];
+ 518              		.loc 1 156 25 is_stmt 0 view .LVU102
+ 519 003a 13F8010B 		ldrb	r0, [r3], #1	@ zero_extendqisi2
+ 156:simpleserial-kyber.c ****         new_ptr[i] = ptr[offset+i];
+ 520              		.loc 1 156 20 view .LVU103
+ 521 003e 01F8010B 		strb	r0, [r1], #1
+ 155:simpleserial-kyber.c ****         new_ptr[i] = ptr[offset+i];
+ 522              		.loc 1 155 34 is_stmt 1 discriminator 3 view .LVU104
+ 523 0042 0132     		adds	r2, r2, #1
+ 524              	.LVL44:
+ 155:simpleserial-kyber.c ****         new_ptr[i] = ptr[offset+i];
+ 525              		.loc 1 155 34 is_stmt 0 discriminator 3 view .LVU105
+ 526 0044 EFE7     		b	.L27
+ 527              	.L30:
+ 528 0046 00BF     		.align	2
+ 529              	.L29:
+ 530 0048 00000000 		.word	.LANCHOR0
+ 531              		.cfi_endproc
+ 532              	.LFE7:
+ 534              		.section	.text.startup.main,"ax",%progbits
+ 535              		.align	1
+ 536              		.global	main
+ 537              		.syntax unified
+ 538              		.thumb
+ 539              		.thumb_func
+ 541              	main:
+ 542              	.LFB8:
+ 162:simpleserial-kyber.c **** 
+ 163:simpleserial-kyber.c **** int main(void)
+ 164:simpleserial-kyber.c **** {
+ 543              		.loc 1 164 1 is_stmt 1 view -0
+ 544              		.cfi_startproc
+ 545              		@ Volatile: function does not return.
+ 546              		@ args = 0, pretend = 0, frame = 0
+ 547              		@ frame_needed = 0, uses_anonymous_args = 0
+ 165:simpleserial-kyber.c ****     // Inicializar chipwhisperer
+ 166:simpleserial-kyber.c ****     platform_init();
+ 548              		.loc 1 166 5 view .LVU107
+ 164:simpleserial-kyber.c ****     // Inicializar chipwhisperer
+ 549              		.loc 1 164 1 is_stmt 0 view .LVU108
+ 550 0000 08B5     		push	{r3, lr}
+ 551              	.LCFI15:
+ 552              		.cfi_def_cfa_offset 8
+ 553              		.cfi_offset 3, -8
+ 554              		.cfi_offset 14, -4
+ 555              		.loc 1 166 5 view .LVU109
+ 556 0002 FFF7FEFF 		bl	platform_init
+ 557              	.LVL45:
+ 167:simpleserial-kyber.c **** 	init_uart();
+ 558              		.loc 1 167 2 is_stmt 1 view .LVU110
+ 559 0006 FFF7FEFF 		bl	init_uart
+ 560              	.LVL46:
+ 168:simpleserial-kyber.c **** 	trigger_setup();
+ 561              		.loc 1 168 2 view .LVU111
+ 562 000a FFF7FEFF 		bl	trigger_setup
+ 563              	.LVL47:
+ 169:simpleserial-kyber.c **** 
+ 170:simpleserial-kyber.c **** 	simpleserial_init();
+ 564              		.loc 1 170 2 view .LVU112
+ 565 000e FFF7FEFF 		bl	simpleserial_init
+ 566              	.LVL48:
+ 171:simpleserial-kyber.c **** 
+ 172:simpleserial-kyber.c ****     // Inicializar kyber
+ 173:simpleserial-kyber.c ****     // unsigned int i;
+ 174:simpleserial-kyber.c ****     // int r;
+ 175:simpleserial-kyber.c ****     // srand(time(NULL)); //SEMILLA NUMEROS ALEATORIOS.
+ 176:simpleserial-kyber.c **** 
+ 177:simpleserial-kyber.c ****     /*
+ 178:simpleserial-kyber.c ****     for(i=0;i<NTESTS;i++) {
+ 179:simpleserial-kyber.c ****         r  = test_keys();
+ 180:simpleserial-kyber.c ****         //sleep(100);
+ 181:simpleserial-kyber.c ****         // r |= test_invalid_sk_a();
+ 182:simpleserial-kyber.c ****         // r |= test_invalid_ciphertext();
+ 183:simpleserial-kyber.c ****         if (r) {
+ 184:simpleserial-kyber.c ****             return 1;
+ 185:simpleserial-kyber.c ****             
+ 186:simpleserial-kyber.c ****         }
+ 187:simpleserial-kyber.c ****     }
+ 188:simpleserial-kyber.c ****     */
+ 189:simpleserial-kyber.c ****     
+ 190:simpleserial-kyber.c **** 	simpleserial_addcmd('g', BUFFER_LEN, generate_key);
+ 567              		.loc 1 190 2 view .LVU113
+ 568 0012 154A     		ldr	r2, .L33
+ 569 0014 3F21     		movs	r1, #63
+ 570 0016 6720     		movs	r0, #103
+ 571 0018 FFF7FEFF 		bl	simpleserial_addcmd
+ 572              	.LVL49:
+ 191:simpleserial-kyber.c **** 	simpleserial_addcmd('e', BUFFER_LEN, encapsulate);
+ 573              		.loc 1 191 2 view .LVU114
+ 574 001c 134A     		ldr	r2, .L33+4
+ 575 001e 3F21     		movs	r1, #63
+ 576 0020 6520     		movs	r0, #101
+ 577 0022 FFF7FEFF 		bl	simpleserial_addcmd
+ 578              	.LVL50:
+ 192:simpleserial-kyber.c **** 	simpleserial_addcmd('d', BUFFER_LEN, decapsulate);
+ 579              		.loc 1 192 2 view .LVU115
+ 580 0026 124A     		ldr	r2, .L33+8
+ 581 0028 3F21     		movs	r1, #63
+ 582 002a 6420     		movs	r0, #100
+ 583 002c FFF7FEFF 		bl	simpleserial_addcmd
+ 584              	.LVL51:
+ 193:simpleserial-kyber.c **** 	simpleserial_addcmd('t', BUFFER_LEN, temp_decapsulate);
+ 585              		.loc 1 193 2 view .LVU116
+ 586 0030 104A     		ldr	r2, .L33+12
+ 587 0032 3F21     		movs	r1, #63
+ 588 0034 7420     		movs	r0, #116
+ 589 0036 FFF7FEFF 		bl	simpleserial_addcmd
+ 590              	.LVL52:
+ 194:simpleserial-kyber.c ****     simpleserial_addcmd('c', BUFFER_LEN, clock_signal);
+ 591              		.loc 1 194 5 view .LVU117
+ 592 003a 0F4A     		ldr	r2, .L33+16
+ 593 003c 3F21     		movs	r1, #63
+ 594 003e 6320     		movs	r0, #99
+ 595 0040 FFF7FEFF 		bl	simpleserial_addcmd
+ 596              	.LVL53:
+ 195:simpleserial-kyber.c ****     simpleserial_addcmd('i', BUFFER_LEN, insert_variable);
+ 597              		.loc 1 195 5 view .LVU118
+ 598 0044 0D4A     		ldr	r2, .L33+20
+ 599 0046 3F21     		movs	r1, #63
+ 600 0048 6920     		movs	r0, #105
+ 601 004a FFF7FEFF 		bl	simpleserial_addcmd
+ 602              	.LVL54:
+ 196:simpleserial-kyber.c ****     simpleserial_addcmd('r', BUFFER_LEN, return_variable);
+ 603              		.loc 1 196 5 view .LVU119
+ 604 004e 0C4A     		ldr	r2, .L33+24
+ 605 0050 3F21     		movs	r1, #63
+ 606 0052 7220     		movs	r0, #114
+ 607 0054 FFF7FEFF 		bl	simpleserial_addcmd
+ 608              	.LVL55:
+ 197:simpleserial-kyber.c ****     simpleserial_addcmd('p', 1, prueba);
+ 609              		.loc 1 197 5 view .LVU120
+ 610 0058 0A4A     		ldr	r2, .L33+28
+ 611 005a 0121     		movs	r1, #1
+ 612 005c 7020     		movs	r0, #112
+ 613 005e FFF7FEFF 		bl	simpleserial_addcmd
+ 614              	.LVL56:
+ 615              	.L32:
+ 198:simpleserial-kyber.c **** 
+ 199:simpleserial-kyber.c **** 	while(1)
+ 616              		.loc 1 199 2 view .LVU121
+ 200:simpleserial-kyber.c **** 		simpleserial_get();
+ 617              		.loc 1 200 3 discriminator 1 view .LVU122
+ 618 0062 FFF7FEFF 		bl	simpleserial_get
+ 619              	.LVL57:
+ 199:simpleserial-kyber.c **** 		simpleserial_get();
+ 620              		.loc 1 199 7 view .LVU123
+ 621 0066 FCE7     		b	.L32
+ 622              	.L34:
+ 623              		.align	2
+ 624              	.L33:
+ 625 0068 00000000 		.word	generate_key
+ 626 006c 00000000 		.word	encapsulate
+ 627 0070 00000000 		.word	decapsulate
+ 628 0074 00000000 		.word	temp_decapsulate
+ 629 0078 00000000 		.word	clock_signal
+ 630 007c 00000000 		.word	insert_variable
+ 631 0080 00000000 		.word	return_variable
+ 632 0084 00000000 		.word	prueba
+ 633              		.cfi_endproc
+ 634              	.LFE8:
+ 636              		.global	variables
+ 637              		.global	ss_temp
+ 638              		.global	ct_temp
+ 639              		.global	sk_temp
+ 640              		.global	pk_temp
+ 641              		.global	ss
+ 642              		.global	ct
+ 643              		.global	sk
+ 644              		.global	pk
+ 645              		.data
+ 646              		.align	2
+ 647              		.set	.LANCHOR0,. + 0
+ 650              	variables:
+ 651 0000 00000000 		.word	pk
+ 652 0004 00000000 		.word	sk
+ 653 0008 00000000 		.word	ct
+ 654 000c 00000000 		.word	ss
+ 655 0010 00000000 		.word	pk_temp
+ 656 0014 00000000 		.word	sk_temp
+ 657 0018 00000000 		.word	ct_temp
+ 658 001c 00000000 		.word	ss_temp
+ 659              		.bss
+ 660              		.set	.LANCHOR1,. + 0
+ 661              		.set	.LANCHOR2,. + 4344
+ 664              	sk:
+ 665 0000 00000000 		.space	2400
+ 665      00000000 
+ 665      00000000 
+ 665      00000000 
+ 665      00000000 
+ 668              	pk:
+ 669 0960 00000000 		.space	1184
+ 669      00000000 
+ 669      00000000 
+ 669      00000000 
+ 669      00000000 
+ 672              	ss:
+ 673 0e00 00000000 		.space	32
+ 673      00000000 
+ 673      00000000 
+ 673      00000000 
+ 673      00000000 
+ 676              	ct:
+ 677 0e20 00000000 		.space	1088
+ 677      00000000 
+ 677      00000000 
+ 677      00000000 
+ 677      00000000 
+ 680              	sk_temp:
+ 681 1260 00000000 		.space	2400
+ 681      00000000 
+ 681      00000000 
+ 681      00000000 
+ 681      00000000 
+ 684              	ct_temp:
+ 685 1bc0 00000000 		.space	1088
+ 685      00000000 
+ 685      00000000 
+ 685      00000000 
+ 685      00000000 
+ 688              	ss_temp:
+ 689 2000 00000000 		.space	32
+ 689      00000000 
+ 689      00000000 
+ 689      00000000 
+ 689      00000000 
+ 692              	pk_temp:
+ 693 2020 00000000 		.space	1184
+ 693      00000000 
+ 693      00000000 
+ 693      00000000 
+ 693      00000000 
+ 694              		.text
+ 695              	.Letext0:
+ 696              		.file 2 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stdint.h"
+ 697              		.file 3 "/usr/lib/gcc/arm-none-eabi/13.2.1/include/stddef.h"
+ 698              		.file 4 ".././simpleserial/simpleserial.h"
+ 699              		.file 5 ".././hal/stm32f3/stm32f3_hal.h"
+ 700              		.file 6 ".././hal/hal.h"
+ 701              		.file 7 "/usr/include/newlib/string.h"
+ 702              		.file 8 "kem.h"
+ 703              		.file 9 "<built-in>"
+DEFINED SYMBOLS
+                            *ABS*:00000000 simpleserial-kyber.c
+     /tmp/ccPMCzlL.s:19     .text.insert_variable:00000000 $t
+     /tmp/ccPMCzlL.s:25     .text.insert_variable:00000000 insert_variable
+     /tmp/ccPMCzlL.s:86     .text.insert_variable:00000038 $d
+     /tmp/ccPMCzlL.s:91     .text.generate_key:00000000 $t
+     /tmp/ccPMCzlL.s:97     .text.generate_key:00000000 generate_key
+     /tmp/ccPMCzlL.s:136    .text.generate_key:00000024 $d
+     /tmp/ccPMCzlL.s:145    .text.clock_signal:00000000 $t
+     /tmp/ccPMCzlL.s:151    .text.clock_signal:00000000 clock_signal
+     /tmp/ccPMCzlL.s:197    .text.clock_signal:00000028 $d
+     /tmp/ccPMCzlL.s:205    .text.prueba:00000000 $t
+     /tmp/ccPMCzlL.s:211    .text.prueba:00000000 prueba
+     /tmp/ccPMCzlL.s:271    .text.prueba:0000003c $d
+     /tmp/ccPMCzlL.s:276    .text.encapsulate:00000000 $t
+     /tmp/ccPMCzlL.s:282    .text.encapsulate:00000000 encapsulate
+     /tmp/ccPMCzlL.s:323    .text.encapsulate:0000002c $d
+     /tmp/ccPMCzlL.s:328    .text.decapsulate:00000000 $t
+     /tmp/ccPMCzlL.s:334    .text.decapsulate:00000000 decapsulate
+     /tmp/ccPMCzlL.s:374    .text.decapsulate:00000028 $d
+     /tmp/ccPMCzlL.s:379    .text.temp_decapsulate:00000000 $t
+     /tmp/ccPMCzlL.s:385    .text.temp_decapsulate:00000000 temp_decapsulate
+     /tmp/ccPMCzlL.s:425    .text.temp_decapsulate:0000002c $d
+     /tmp/ccPMCzlL.s:431    .text.return_variable:00000000 $t
+     /tmp/ccPMCzlL.s:437    .text.return_variable:00000000 return_variable
+     /tmp/ccPMCzlL.s:530    .text.return_variable:00000048 $d
+     /tmp/ccPMCzlL.s:535    .text.startup.main:00000000 $t
+     /tmp/ccPMCzlL.s:541    .text.startup.main:00000000 main
+     /tmp/ccPMCzlL.s:625    .text.startup.main:00000068 $d
+     /tmp/ccPMCzlL.s:650    .data:00000000 variables
+     /tmp/ccPMCzlL.s:688    .bss:00002000 ss_temp
+     /tmp/ccPMCzlL.s:684    .bss:00001bc0 ct_temp
+     /tmp/ccPMCzlL.s:680    .bss:00001260 sk_temp
+     /tmp/ccPMCzlL.s:692    .bss:00002020 pk_temp
+     /tmp/ccPMCzlL.s:672    .bss:00000e00 ss
+     /tmp/ccPMCzlL.s:676    .bss:00000e20 ct
+     /tmp/ccPMCzlL.s:664    .bss:00000000 sk
+     /tmp/ccPMCzlL.s:668    .bss:00000960 pk
+     /tmp/ccPMCzlL.s:646    .data:00000000 $d
+     /tmp/ccPMCzlL.s:665    .bss:00000000 $d
+
+UNDEFINED SYMBOLS
+trigger_high
+crypto_kem_keypair
+trigger_low
+simpleserial_put
+memcpy
+crypto_kem_enc
+crypto_kem_dec
+memset
+platform_init
+init_uart
+trigger_setup
+simpleserial_init
+simpleserial_addcmd
+simpleserial_get
